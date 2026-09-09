@@ -23,14 +23,31 @@ const PORT = parseInt(process.env.PORT, 10) || 8000;
 app.set("port", PORT);
 
 // Configure CORS
-const allowedOrigin = process.env.CORS_ORIGIN 
-    ? (process.env.CORS_ORIGIN === "*" ? "*" : process.env.CORS_ORIGIN.split(",").map(s => s.trim()))
-    : "*";
+// Configure CORS
+const allowedOrigins = [
+    "https://connect-meet-inky.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+];
 
 app.use(cors({
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+        // Allow requests without an origin
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        console.log("CORS blocked origin:", origin);
+        return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    optionsSuccessStatus: 204
 }));
 
 // Payload limits
