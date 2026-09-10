@@ -20,7 +20,7 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   username: z.string().min(3, 'Username must be at least 3 characters'),
-  password: z.string().min(4, 'Password must be at least 4 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 const Auth = () => {
@@ -163,7 +163,7 @@ const Auth = () => {
                 }}>language barriers.</span>
               </h1>
               <p style={{ color: '#9CA3AF', fontSize: '1.1rem', lineHeight: 1.6, margin: 0 }}>
-                Secure, enterprise-grade WebRTC conferences powered by Microsoft Azure Translation services.
+                Secure, enterprise-grade WebRTC conferences powered by high-performance neural translation services.
               </p>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '12px' }}>
@@ -178,7 +178,7 @@ const Auth = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
                   <div style={{ color: 'var(--secondary)' }}><Cpu size={20} /></div>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Dynamic Azure Cascade</div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Real-Time Neural Translation</div>
                     <div style={{ color: '#9CA3AF', fontSize: '0.8rem', marginTop: '2px' }}>High-fidelity translation arrays detecting languages on-the-fly.</div>
                   </div>
                 </div>
@@ -213,6 +213,7 @@ const Auth = () => {
                 border: '1px solid var(--border)'
               }}>
                 <button
+                  type="button"
                   onClick={() => { setIsLogin(true); setApiError(''); }}
                   style={{
                     flex: 1,
@@ -231,6 +232,7 @@ const Auth = () => {
                   Sign In
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setIsLogin(false); setApiError(''); }}
                   style={{
                     flex: 1,
@@ -268,10 +270,12 @@ const Auth = () => {
 
               {/* Form rendering */}
               {isLogin ? (
-                <form onSubmit={handleLoginSubmit(onLoginSubmit)}>
+                <form onSubmit={handleLoginSubmit(onLoginSubmit)} noValidate>
                   <Input
                     label="Username"
+                    id="login-username"
                     type="text"
+                    autoComplete="username"
                     placeholder="Enter your username"
                     iconLeft={<User size={18} />}
                     error={loginErrors.username?.message}
@@ -279,7 +283,9 @@ const Auth = () => {
                   />
                   <Input
                     label="Password"
+                    id="login-password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     iconLeft={<Lock size={18} />}
                     error={loginErrors.password?.message}
@@ -289,19 +295,25 @@ const Auth = () => {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
                       <input type="checkbox" style={{ accentColor: 'var(--primary)', width: '15px', height: '15px' }} /> Remember me
                     </label>
-                    <a href="#forgot" onClick={(e) => { e.preventDefault(); addToast('Password reset interface placeholder', 'info'); }} style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>
+                    <button
+                      type="button"
+                      onClick={() => addToast('Please contact your meeting administrator to reset password.', 'info')}
+                      style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer' }}
+                    >
                       Forgot Password?
-                    </a>
+                    </button>
                   </div>
                   <Button type="submit" variant="primary" loading={loginSubmitting} width="100%" style={{ padding: '12px 20px', borderRadius: '30px', fontWeight: 700 }}>
                     Sign In <ArrowRight size={16} style={{ marginLeft: '6px' }} />
                   </Button>
                 </form>
               ) : (
-                <form onSubmit={handleRegisterSubmit(onRegisterSubmit)}>
+                <form onSubmit={handleRegisterSubmit(onRegisterSubmit)} noValidate>
                   <Input
                     label="Full Name"
+                    id="register-name"
                     type="text"
+                    autoComplete="name"
                     placeholder="Enter full name"
                     iconLeft={<User size={18} />}
                     error={registerErrors.name?.message}
@@ -309,7 +321,9 @@ const Auth = () => {
                   />
                   <Input
                     label="Username"
+                    id="register-username"
                     type="text"
+                    autoComplete="username"
                     placeholder="Choose a username"
                     iconLeft={<Mail size={18} />}
                     error={registerErrors.username?.message}
@@ -317,8 +331,10 @@ const Auth = () => {
                   />
                   <Input
                     label="Password"
+                    id="register-password"
                     type="password"
-                    placeholder="Create your password"
+                    autoComplete="new-password"
+                    placeholder="Create your password (min. 6 characters)"
                     iconLeft={<Lock size={18} />}
                     error={registerErrors.password?.message}
                     {...registerRegister('password')}
@@ -328,6 +344,10 @@ const Auth = () => {
                   </Button>
                 </form>
               )}
+
+              <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                Connect Meet is an independent video conferencing platform.
+              </div>
             </Card>
           </div>
         </div>

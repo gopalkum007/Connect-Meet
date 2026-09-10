@@ -35,8 +35,7 @@ const defaultAllowedOrigins = [
 const envAllowedOrigins = (process.env.CORS_ORIGIN || "")
     .split(",")
     .map(o => o.trim())
-    .filter(Boolean)
-    .filter(o => !o.includes("connect-meet-inky.vercel.app")); // Never allow or return old Vercel origin
+    .filter(Boolean);
 
 const allowedOriginsSet = new Set([...defaultAllowedOrigins, ...envAllowedOrigins]);
 
@@ -46,11 +45,6 @@ app.use(cors({
         // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
         if (!origin) {
             return callback(null, true);
-        }
-
-        // Strictly reject deprecated Vercel origin
-        if (origin.includes("connect-meet-inky.vercel.app")) {
-            return callback(new Error("CORS blocked: Deprecated origin"));
         }
 
         if (
@@ -96,6 +90,7 @@ app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "SAMEORIGIN");
     res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     next();
 });
 

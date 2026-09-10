@@ -77,8 +77,7 @@ export const connectToSocket = (server) => {
     const envOrigins = (process.env.CORS_ORIGIN || "")
         .split(",")
         .map(s => s.trim())
-        .filter(Boolean)
-        .filter(s => !s.includes("connect-meet-inky.vercel.app"));
+        .filter(Boolean);
 
     const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
@@ -86,9 +85,6 @@ export const connectToSocket = (server) => {
         cors: {
             origin: (origin, callback) => {
                 if (!origin) return callback(null, true);
-                if (origin.includes("connect-meet-inky.vercel.app")) {
-                    return callback(new Error("Socket CORS blocked: Deprecated origin"), false);
-                }
                 if (
                     allowedOrigins.includes("*") ||
                     allowedOrigins.includes(origin) ||
