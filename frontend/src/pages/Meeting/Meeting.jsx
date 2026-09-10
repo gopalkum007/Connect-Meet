@@ -500,11 +500,27 @@ const Meeting = () => {
       window.localStream = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => {});
       }
     } catch (error) {
       console.error("[MEDIA] getPermissions error:", error);
     }
   };
+
+  // Ensure local video element receives and plays the existing local stream whenever
+  // switching from lobby/waiting-room into the meeting or when toggling video
+  useEffect(() => {
+    if (!isMeetingActiveRef.current) return;
+    const stream = localStreamRef.current || window.localStream;
+    if (localVideoRef.current && stream) {
+      if (localVideoRef.current.srcObject !== stream) {
+        localVideoRef.current.srcObject = stream;
+      }
+      localVideoRef.current.play().catch((err) => {
+        console.warn("[Local Video] Autoplay / play error:", err);
+      });
+    }
+  }, [askForUsername, isWaitingForHostApproval, video]);
 
   useEffect(() => {
     if (!isMeetingActiveRef.current) return;
@@ -621,6 +637,7 @@ const Meeting = () => {
     window.localStream = stream;
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
+      localVideoRef.current.play().catch(() => {});
     }
 
     for (let id in connectionsRef.current) {
@@ -2052,7 +2069,22 @@ const Meeting = () => {
               {/* Left Column: Video Preview and Hardware Configuration */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ position: 'relative', width: '100%', height: '240px', background: '#090D1A', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid #374151' }}>
-                  <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }}></video>
+                  <video
+                    ref={(el) => {
+                      localVideoRef.current = el;
+                      const stream = localStreamRef.current || window.localStream;
+                      if (el && stream && el.srcObject !== stream) {
+                        el.srcObject = stream;
+                        el.play().catch((err) => {
+                          console.warn("[Lobby Video] play error:", err);
+                        });
+                      }
+                    }}
+                    autoPlay
+                    muted
+                    playsInline
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                   <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(9, 13, 26, 0.85)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', color: '#F3F4F6', border: '1px solid #1F2937' }}>
                     📹 Video Preview
                   </div>
@@ -2321,7 +2353,16 @@ const Meeting = () => {
                   className={`videoTile ${audio && activeSpeaker === socketIdRef.current ? 'speaking' : ''}`}
                 >
                   <video
-                    ref={localVideoRef}
+                    ref={(el) => {
+                      localVideoRef.current = el;
+                      const stream = localStreamRef.current || window.localStream;
+                      if (el && stream && el.srcObject !== stream) {
+                        el.srcObject = stream;
+                        el.play().catch((err) => {
+                          console.warn("[Local Video] play error:", err);
+                        });
+                      }
+                    }}
                     autoPlay
                     muted
                     playsInline
