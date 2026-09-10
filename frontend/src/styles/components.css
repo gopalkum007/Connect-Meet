@@ -254,7 +254,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 480px;
+  max-width: min(480px, calc(100vw - 24px));
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);

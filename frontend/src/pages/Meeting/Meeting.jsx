@@ -1865,8 +1865,258 @@ const Meeting = () => {
   };
 
   return (
-    <div style={{ background: '#090D1A', minHeight: '100vh', display: 'flex', flexDirection: 'column', color: '#F8FAFC' }}>
+    <div className="meeting-root">
       <style>{`
+        .meeting-root {
+          background: #090D1A;
+          min-height: 100vh;
+          min-height: 100dvh;
+          height: 100dvh;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          color: #F8FAFC;
+          overflow: hidden;
+          position: relative;
+        }
+
+        /* Top Header Bar */
+        .meeting-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 18px;
+          background: rgba(17, 24, 39, 0.9);
+          backdrop-filter: blur(16px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          z-index: 15;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          flex-shrink: 0;
+          gap: 8px;
+        }
+        .meeting-header-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          flex: 1;
+          overflow: hidden;
+        }
+        .meeting-header-right {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-shrink: 0;
+        }
+        .meeting-code-text {
+          font-size: 0.92rem;
+          font-weight: 800;
+          color: #F9FAFB;
+          letter-spacing: -0.01em;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 180px;
+        }
+        .meeting-host-badge {
+          font-size: 0.78rem;
+          color: #9CA3AF;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 140px;
+        }
+
+        /* Main Workspace Container */
+        .meeting-workspace {
+          flex: 1;
+          display: flex;
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          min-height: 0;
+          height: 100%;
+        }
+        .meeting-video-panel {
+          flex: 1;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          overflow-y: auto;
+          position: relative;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        /* Adaptive Video Grid */
+        .meeting-video-grid {
+          display: grid;
+          gap: 14px;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          margin: 0 auto;
+          align-items: center;
+          justify-content: center;
+          flex: 1;
+        }
+        .meeting-video-grid.grid-1 {
+          grid-template-columns: 1fr;
+          max-width: 850px;
+        }
+        .meeting-video-grid.grid-2 {
+          grid-template-columns: 1fr 1fr;
+          max-width: 950px;
+        }
+        .meeting-video-grid.grid-multi {
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          max-width: 1200px;
+        }
+
+        /* Controls Docking Bar */
+        .meeting-controls-dock {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          max-width: 750px;
+          margin: 10px auto 0;
+          position: relative;
+          z-index: 20;
+          flex-shrink: 0;
+          padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+        }
+        .meeting-toolbar-deck {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          background: rgba(17, 24, 39, 0.9);
+          backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 8px 18px;
+          border-radius: 40px;
+          max-width: 100%;
+          width: auto;
+          flex-wrap: wrap;
+          box-shadow: var(--shadow-lg);
+        }
+
+        /* Sidebar Panel (Desktop: side-by-side flex column) */
+        @media (min-width: 769px) {
+          .meeting-sidebar-panel {
+            width: 360px;
+            min-width: 320px;
+            max-width: 380px;
+            background: #111827;
+            border-left: 1px solid #1F2937;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            z-index: 30;
+            flex-shrink: 0;
+          }
+        }
+
+        /* Sidebar Panel (Mobile <= 768px: full overlay drawer) */
+        @media (max-width: 768px) {
+          .meeting-sidebar-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100% !important;
+            height: 100% !important;
+            background: #111827;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            border-left: none;
+            box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.6);
+          }
+        }
+
+        .show-on-mobile {
+          display: none;
+        }
+
+        /* Mobile Breakpoint Rules (<= 640px) */
+        @media (max-width: 640px) {
+          .meeting-header {
+            padding: 8px 10px;
+            gap: 6px;
+          }
+          .meeting-code-text {
+            max-width: 110px;
+            font-size: 0.82rem;
+          }
+          .meeting-host-badge {
+            display: none !important;
+          }
+          .hide-on-mobile {
+            display: none !important;
+          }
+          .show-on-mobile {
+            display: inline !important;
+          }
+          .meeting-video-panel {
+            padding: 8px;
+            gap: 8px;
+          }
+          .meeting-video-grid {
+            gap: 8px;
+          }
+          .meeting-video-grid.grid-1 {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+          }
+          /* In portrait mobile, stack 2 participants vertically so videos are big */
+          .meeting-video-grid.grid-2 {
+            grid-template-columns: 1fr;
+            max-width: 100%;
+          }
+          .meeting-video-grid.grid-multi {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+            max-width: 100%;
+          }
+          .meeting-controls-dock {
+            margin-top: 4px;
+          }
+          .meeting-toolbar-deck {
+            padding: 6px 8px;
+            gap: 6px;
+            border-radius: 24px;
+            width: 100%;
+          }
+          .meeting-btn-leave {
+            padding: 6px 12px !important;
+            font-size: 0.78rem !important;
+          }
+        }
+
+        /* Landscape Mobile Rule for 2 participants */
+        @media (max-width: 640px) and (orientation: landscape) {
+          .meeting-video-grid.grid-2 {
+            grid-template-columns: 1fr 1fr;
+          }
+          .meeting-video-panel {
+            padding: 4px;
+          }
+        }
+
         .speaking {
             border: 3px solid #22c55e !important;
             box-shadow: 0 0 15px rgba(34, 197, 94, 0.7) !important;
@@ -1915,13 +2165,13 @@ const Meeting = () => {
       `}</style>
       {isMeetingEnded ? (
         /* Meeting Ended Screen */
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'radial-gradient(circle at center, rgba(239, 68, 68, 0.08), transparent 70%)' }}>
-          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '580px', padding: '40px 32px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 3vw, 24px)', width: '100%', maxWidth: '100%', minWidth: 0, background: 'radial-gradient(circle at center, rgba(239, 68, 68, 0.08), transparent 70%)' }}>
+          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '580px', minWidth: 0, padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 32px)', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
               <PhoneOff size={32} />
             </div>
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#F9FAFB', margin: '0 0 8px 0' }}>Meeting Ended</h2>
-            <p style={{ color: '#9CA3AF', fontSize: '0.95rem', lineHeight: 1.5, marginBottom: '28px' }}>
+            <h2 style={{ fontSize: 'clamp(1.4rem, 4vw, 1.8rem)', fontWeight: 800, color: '#F9FAFB', margin: '0 0 8px 0' }}>Meeting Ended</h2>
+            <p style={{ color: '#9CA3AF', fontSize: '0.92rem', lineHeight: 1.5, marginBottom: '28px' }}>
               The host has ended this meeting. You can no longer join this session.
             </p>
             <Button variant="primary" onClick={() => navigate('/home')} iconRight={<ArrowRight size={16} />}>
@@ -1931,73 +2181,73 @@ const Meeting = () => {
         </div>
       ) : isWaitingForSchedule ? (
         /* Scheduled Meeting Waiting & Countdown Screen */
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'radial-gradient(circle at center, rgba(14, 113, 235, 0.08), transparent 70%)' }}>
-          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '680px', padding: '36px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 3vw, 24px)', width: '100%', maxWidth: '100%', minWidth: 0, background: 'radial-gradient(circle at center, rgba(14, 113, 235, 0.08), transparent 70%)' }}>
+          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '680px', minWidth: 0, padding: 'clamp(20px, 4vw, 36px) clamp(14px, 3vw, 28px)', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
             
             {/* Top Header Badge */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '30px', color: '#F59E0B', fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.02em', marginBottom: '20px' }}>
               <Clock size={16} /> Scheduled Meeting
             </div>
 
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#F9FAFB', letterSpacing: '-0.02em', margin: '0 0 8px 0' }}>
+            <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 800, color: '#F9FAFB', letterSpacing: '-0.02em', margin: '0 0 8px 0' }}>
               {meetingDetails?.title || "Upcoming Scheduled Meeting"}
             </h2>
 
-            <p style={{ color: '#9CA3AF', fontSize: '0.92rem', marginBottom: '28px' }}>
+            <p style={{ color: '#9CA3AF', fontSize: '0.9rem', marginBottom: '24px' }}>
               Meeting ID: <strong style={{ color: 'var(--primary)' }}>{meetingCode}</strong>
             </p>
 
             {/* Countdown Box */}
-            <div style={{ background: '#090D1A', border: '1px solid #374151', borderRadius: 'var(--radius-lg)', padding: '28px 20px', marginBottom: '28px' }}>
-              <div style={{ fontSize: '0.8rem', color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '18px' }}>
+            <div style={{ background: '#090D1A', border: '1px solid #374151', borderRadius: 'var(--radius-lg)', padding: 'clamp(16px, 3vw, 28px) clamp(10px, 2vw, 20px)', marginBottom: '24px', width: '100%', minWidth: 0 }}>
+              <div style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '14px' }}>
                 Meeting starts in
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '14px 20px', borderRadius: '12px', minWidth: '80px' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'clamp(6px, 1.5vw, 12px)', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '10px 14px', borderRadius: '12px', minWidth: '55px', flex: '1 1 55px', maxWidth: '85px' }}>
+                  <span style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
                     {String(countdownTime.days).padStart(2, '0')}
                   </span>
-                  <span style={{ fontSize: '0.7rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '4px', fontWeight: 600 }}>Days</span>
+                  <span style={{ fontSize: '0.65rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '2px', fontWeight: 600 }}>Days</span>
                 </div>
 
-                <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#374151' }}>:</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#374151' }}>:</span>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '14px 20px', borderRadius: '12px', minWidth: '80px' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '10px 14px', borderRadius: '12px', minWidth: '55px', flex: '1 1 55px', maxWidth: '85px' }}>
+                  <span style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
                     {String(countdownTime.hours).padStart(2, '0')}
                   </span>
-                  <span style={{ fontSize: '0.7rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '4px', fontWeight: 600 }}>Hours</span>
+                  <span style={{ fontSize: '0.65rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '2px', fontWeight: 600 }}>Hours</span>
                 </div>
 
-                <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#374151' }}>:</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#374151' }}>:</span>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '14px 20px', borderRadius: '12px', minWidth: '80px' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '10px 14px', borderRadius: '12px', minWidth: '55px', flex: '1 1 55px', maxWidth: '85px' }}>
+                  <span style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', fontWeight: 800, color: 'var(--primary)', fontFamily: 'monospace' }}>
                     {String(countdownTime.minutes).padStart(2, '0')}
                   </span>
-                  <span style={{ fontSize: '0.7rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '4px', fontWeight: 600 }}>Minutes</span>
+                  <span style={{ fontSize: '0.65rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '2px', fontWeight: 600 }}>Mins</span>
                 </div>
 
-                <span style={{ fontSize: '1.8rem', fontWeight: 700, color: '#374151' }}>:</span>
+                <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#374151' }}>:</span>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '14px 20px', borderRadius: '12px', minWidth: '80px' }}>
-                  <span style={{ fontSize: '2rem', fontWeight: 800, color: '#10B981', fontFamily: 'monospace' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#111827', border: '1px solid #1F2937', padding: '10px 14px', borderRadius: '12px', minWidth: '55px', flex: '1 1 55px', maxWidth: '85px' }}>
+                  <span style={{ fontSize: 'clamp(1.4rem, 3.5vw, 2rem)', fontWeight: 800, color: '#10B981', fontFamily: 'monospace' }}>
                     {String(countdownTime.seconds).padStart(2, '0')}
                   </span>
-                  <span style={{ fontSize: '0.7rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '4px', fontWeight: 600 }}>Seconds</span>
+                  <span style={{ fontSize: '0.65rem', color: '#9CA3AF', textTransform: 'uppercase', marginTop: '2px', fontWeight: 600 }}>Secs</span>
                 </div>
               </div>
 
               {meetingDetails?.scheduledStartTime && (
-                <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid #1F2937', fontSize: '0.9rem', color: '#E5E7EB' }}>
+                <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid #1F2937', fontSize: '0.85rem', color: '#E5E7EB' }}>
                   <strong>Scheduled for:</strong> {new Date(meetingDetails.scheduledStartTime).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}, {new Date(meetingDetails.scheduledStartTime).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                 </div>
               )}
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -2006,23 +2256,23 @@ const Meeting = () => {
                 }}
                 iconLeft={<Copy size={16} />}
               >
-                Copy Meeting Link
+                Copy Link
               </Button>
               <Button variant="outline" onClick={() => navigate('/home')}>
-                Back to Dashboard
+                Dashboard
               </Button>
             </div>
           </Card>
         </div>
       ) : isWaitingForHostApproval ? (
         /* Waiting Room UI */
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'radial-gradient(circle at center, rgba(14, 113, 235, 0.08), transparent 70%)' }}>
-          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '520px', padding: '40px 32px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 3vw, 24px)', width: '100%', maxWidth: '100%', minWidth: 0, background: 'radial-gradient(circle at center, rgba(14, 113, 235, 0.08), transparent 70%)' }}>
+          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '520px', minWidth: 0, padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 32px)', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(14, 113, 235, 0.15)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
               <Clock size={32} />
             </div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#F9FAFB', margin: '0 0 8px 0' }}>Waiting for host to let you in</h2>
-            <p style={{ color: '#9CA3AF', fontSize: '0.92rem', lineHeight: 1.5, marginBottom: '28px' }}>
+            <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.6rem)', fontWeight: 800, color: '#F9FAFB', margin: '0 0 8px 0' }}>Waiting for host to let you in</h2>
+            <p style={{ color: '#9CA3AF', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '24px' }}>
               You've requested to join <strong>{meetingCode}</strong>. The host has been notified.
             </p>
             <Button variant="outline" onClick={handleCancelMyJoinRequest}>
@@ -2032,13 +2282,13 @@ const Meeting = () => {
         </div>
       ) : isJoinRejected ? (
         /* Request Declined UI */
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'radial-gradient(circle at center, rgba(239, 68, 68, 0.08), transparent 70%)' }}>
-          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '520px', padding: '40px 32px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 3vw, 24px)', width: '100%', maxWidth: '100%', minWidth: 0, background: 'radial-gradient(circle at center, rgba(239, 68, 68, 0.08), transparent 70%)' }}>
+          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '520px', minWidth: 0, padding: 'clamp(24px, 5vw, 40px) clamp(16px, 4vw, 32px)', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
               <X size={32} />
             </div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#F9FAFB', margin: '0 0 8px 0' }}>Request Declined</h2>
-            <p style={{ color: '#9CA3AF', fontSize: '0.92rem', lineHeight: 1.5, marginBottom: '28px' }}>
+            <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.6rem)', fontWeight: 800, color: '#F9FAFB', margin: '0 0 8px 0' }}>Request Declined</h2>
+            <p style={{ color: '#9CA3AF', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '24px' }}>
               The meeting host declined your request to join this session.
             </p>
             <Button variant="primary" onClick={() => { setIsJoinRejected(false); setAskForUsername(true); }}>
@@ -2048,19 +2298,23 @@ const Meeting = () => {
         </div>
       ) : askForUsername ? (
         /* Pre-join Lobby UI */
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'radial-gradient(circle at center, rgba(14, 113, 235, 0.05), transparent 70%)' }}>
-          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '850px', padding: '36px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(12px, 3vw, 24px)', width: '100%', maxWidth: '100%', minWidth: 0, background: 'radial-gradient(circle at center, rgba(14, 113, 235, 0.05), transparent 70%)', overflowY: 'auto' }}>
+          <Card style={{ background: '#111827', borderColor: '#1F2937', width: '100%', maxWidth: '850px', minWidth: 0, padding: 'clamp(16px, 4vw, 36px)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} className="scale-up">
             
             <style>{`
               .lobby-grid {
                 display: grid;
                 grid-template-columns: 1fr;
-                gap: 32px;
+                gap: 20px;
                 text-align: left;
+                width: 100%;
+                max-width: 100%;
+                min-width: 0;
               }
-              @media (min-width: 700px) {
+              @media (min-width: 768px) {
                 .lobby-grid {
                   grid-template-columns: 1.1fr 0.9fr;
+                  gap: 32px;
                 }
               }
             `}</style>
@@ -2173,19 +2427,19 @@ const Meeting = () => {
         </div>
       ) : (
         /* Video Meet Workspace */
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#090D1A', position: 'relative' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#090D1A', position: 'relative', width: '100%', maxWidth: '100%', minWidth: 0, minHeight: 0, height: '100%' }}>
           
           {/* Host Floating Join Requests Banner */}
           {isCurrentUserHost && joinRequests.length > 0 && (
             <div style={{
               position: 'fixed',
               top: '20px',
-              right: '20px',
+              right: '16px',
               zIndex: 2500,
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
-              maxWidth: '360px',
+              maxWidth: 'min(360px, calc(100vw - 32px))',
               width: '90%'
             }} className="slide-in">
               {joinRequests.map((req) => (
@@ -2242,18 +2496,9 @@ const Meeting = () => {
           )}
           
           {/* Top Bar Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 24px',
-            background: 'rgba(17, 24, 39, 0.85)',
-            backdropFilter: 'blur(16px)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-            zIndex: 10
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#F9FAFB', letterSpacing: '-0.01em' }}>Meeting: {meetingCode}</span>
+          <div className="meeting-header">
+            <div className="meeting-header-left">
+              <span className="meeting-code-text">Meeting: {meetingCode}</span>
               <span style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -2266,25 +2511,26 @@ const Meeting = () => {
                 borderRadius: '12px',
                 border: '1px solid rgba(16, 185, 129, 0.2)',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em'
+                letterSpacing: '0.05em',
+                flexShrink: 0
               }}>
                 🔒 Encrypted
               </span>
               {hostId && (
-                <span style={{ fontSize: '0.8rem', color: '#9CA3AF', marginLeft: '8px' }}>
+                <span className="meeting-host-badge">
                   Host: <strong style={{ color: '#F3F4F6' }}>{hostId}</strong>
                 </span>
               )}
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#9CA3AF', fontWeight: 600 }}>
+            <div className="meeting-header-right">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#9CA3AF', fontWeight: 600, whiteSpace: 'nowrap' }}>
                 <Clock size={14} style={{ color: 'var(--primary)' }} />
                 <span>{formatDuration(meetingDuration)}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#9CA3AF', fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#9CA3AF', fontWeight: 600, whiteSpace: 'nowrap' }}>
                 <Users size={14} style={{ color: 'var(--accent)' }} />
-                <span>{participants.length} Participants</span>
+                <span>{participants.length} <span className="hide-on-mobile">Participants</span></span>
               </div>
             </div>
           </div>
@@ -2301,16 +2547,20 @@ const Meeting = () => {
               style={{
                 background: 'linear-gradient(90deg, #EF4444, #F59E0B)',
                 color: '#FFFFFF',
-                padding: '10px 20px',
+                padding: '10px 16px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
                 cursor: 'pointer',
                 fontWeight: 600,
-                fontSize: '0.9rem',
+                fontSize: '0.85rem',
                 zIndex: 40,
-                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                textAlign: 'center'
               }}
             >
               <span>🔇 Remote audio may be muted by browser autoplay policy. <strong>Click anywhere here to enable audio</strong></span>
@@ -2318,23 +2568,15 @@ const Meeting = () => {
           )}
 
           {/* Main workspace (video and side panel) */}
-          <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+          <div className="meeting-workspace">
             
             {/* Left panel: videos */}
-            <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center', overflowY: 'auto', position: 'relative' }}>
+            <div className="meeting-video-panel">
               
               {/* Adaptive Grid Layout */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: (videos.length + 1) === 1 ? '1fr' : (videos.length + 1) === 2 ? '1fr 1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
-                gap: '20px',
-                maxWidth: (videos.length + 1) <= 2 ? '900px' : (videos.length + 1) <= 4 ? '1000px' : '1200px',
-                width: '100%',
-                margin: '0 auto',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flex: 1
-              }}>
+              <div
+                className={`meeting-video-grid ${(videos.length + 1) === 1 ? 'grid-1' : (videos.length + 1) === 2 ? 'grid-2' : 'grid-multi'}`}
+              >
                 
                 {/* Local Participant Tile */}
                 <div 
@@ -2348,7 +2590,11 @@ const Meeting = () => {
                     boxShadow: 'var(--shadow)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     aspectRatio: '16/9',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    width: '100%',
+                    maxWidth: '100%',
+                    minWidth: 0,
+                    boxSizing: 'border-box'
                   }}
                   className={`videoTile ${audio && activeSpeaker === socketIdRef.current ? 'speaking' : ''}`}
                 >
@@ -2469,7 +2715,11 @@ const Meeting = () => {
                         boxShadow: 'var(--shadow)',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         aspectRatio: '16/9',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        width: '100%',
+                        maxWidth: '100%',
+                        minWidth: 0,
+                        boxSizing: 'border-box'
                       }}
                       className={`videoTile ${isSpeaking ? 'speaking' : ''}`}
                     >
@@ -2624,30 +2874,20 @@ const Meeting = () => {
               </div>
 
               {/* Controls Docking Bar */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                margin: '20px auto 0',
-                maxWidth: '750px',
-                position: 'relative',
-                zIndex: 20
-              }}>
+              <div className="meeting-controls-dock">
                 
                 {/* Microphones Selector Arrow Menu */}
                 {showMicMenu && (
                   <div style={{
                     position: 'absolute',
                     bottom: '70px',
-                    left: '50px',
+                    left: '10px',
                     background: '#111827',
                     border: '1px solid #374151',
                     borderRadius: 'var(--radius-md)',
                     padding: '8px 0',
-                    width: '240px',
+                    width: 'min(240px, calc(100vw - 24px))',
+                    maxWidth: 'calc(100vw - 24px)',
                     boxShadow: 'var(--shadow-lg)',
                     zIndex: 100,
                     textAlign: 'left'
@@ -2697,7 +2937,8 @@ const Meeting = () => {
                     border: '1px solid #374151',
                     borderRadius: 'var(--radius-md)',
                     padding: '8px 0',
-                    width: '240px',
+                    width: 'min(240px, calc(100vw - 24px))',
+                    maxWidth: 'calc(100vw - 24px)',
                     boxShadow: 'var(--shadow-lg)',
                     zIndex: 100,
                     textAlign: 'left'
@@ -2744,11 +2985,15 @@ const Meeting = () => {
                     gap: '12px',
                     background: '#1F2937',
                     border: '1px solid #374151',
-                    padding: '10px 20px',
+                    padding: '10px 16px',
                     borderRadius: '30px',
                     boxShadow: 'var(--shadow-lg)',
                     position: 'absolute',
                     bottom: '66px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    maxWidth: 'calc(100vw - 24px)',
+                    overflowX: 'auto',
                     zIndex: 20
                   }} className="scale-up">
                     {['😊', '😂', '👍', '🔥', '🎉', '❤️'].map((emoji) => (
@@ -2776,20 +3021,7 @@ const Meeting = () => {
                 )}
 
                 {/* Toolbar buttons deck */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  background: 'rgba(17, 24, 39, 0.8)',
-                  backdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  padding: '12px 24px',
-                  borderRadius: '40px',
-                  width: '100%',
-                  flexWrap: 'wrap',
-                  boxShadow: 'var(--shadow-lg)'
-                }}>
+                <div className="meeting-toolbar-deck">
                   {/* Video Toggle and Arrow */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                     <Button
@@ -2949,18 +3181,22 @@ const Meeting = () => {
                       variant="danger"
                       onClick={() => setIsEndMeetingModalOpen(true)}
                       iconLeft={<PhoneOff size={18} />}
-                      style={{ borderRadius: '30px', padding: '10px 20px', fontSize: '0.85rem', fontWeight: 800, border: 'none' }}
+                      className="meeting-btn-leave"
+                      style={{ borderRadius: '30px', padding: '10px 18px', fontSize: '0.85rem', fontWeight: 800, border: 'none', whiteSpace: 'nowrap' }}
                     >
-                      End Meeting
+                      <span className="hide-on-mobile">End Meeting</span>
+                      <span className="show-on-mobile">End</span>
                     </Button>
                   ) : (
                     <Button
                       variant="danger"
                       onClick={handleEndCall}
                       iconLeft={<PhoneOff size={18} />}
-                      style={{ borderRadius: '30px', padding: '10px 20px', fontSize: '0.85rem', fontWeight: 800, border: 'none' }}
+                      className="meeting-btn-leave"
+                      style={{ borderRadius: '30px', padding: '10px 18px', fontSize: '0.85rem', fontWeight: 800, border: 'none', whiteSpace: 'nowrap' }}
                     >
-                      Leave Room
+                      <span className="hide-on-mobile">Leave Room</span>
+                      <span className="show-on-mobile">Leave</span>
                     </Button>
                   )}
                 </div>
@@ -2969,15 +3205,7 @@ const Meeting = () => {
 
             {/* Right sidebar: Unified Chat & Participant Drawer */}
             {showChat && (
-              <div style={{
-                width: '360px',
-                background: '#111827',
-                borderLeft: '1px solid #1F2937',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-                position: 'relative'
-              }} className="slide-in">
+              <div className="meeting-sidebar-panel slide-in">
                 {/* Tab Selector Headers */}
                 <div style={{
                   display: 'flex',

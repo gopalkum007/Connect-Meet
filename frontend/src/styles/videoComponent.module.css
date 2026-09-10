@@ -1,6 +1,10 @@
 .meetVideoContainer {
     position: relative;
-    height: 100vh;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
     background: rgb(1, 4, 48);
 }
 
@@ -15,7 +19,8 @@
 
 .buttonContainers {
     position: absolute;
-    width: 100vw;
+    width: 100%;
+    max-width: 100%;
     bottom: 0;
     text-align: center;
 }

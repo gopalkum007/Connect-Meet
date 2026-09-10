@@ -1,6 +1,8 @@
 .landingPageContainer {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100dvh;
+  min-height: 100vh;
   background: url("/public/background.png");
   background-repeat: no-repeat;
   background-size: cover;

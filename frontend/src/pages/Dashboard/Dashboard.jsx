@@ -231,6 +231,8 @@ const Dashboard = () => {
           display: flex;
           flex: 1;
           width: 100%;
+          max-width: 100%;
+          min-width: 0;
           overflow: hidden;
         }
         .sidebar {
@@ -274,6 +276,9 @@ const Dashboard = () => {
           flex-direction: column;
           overflow-y: auto;
           position: relative;
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
         }
         .mobile-nav {
           display: flex;
@@ -374,7 +379,7 @@ const Dashboard = () => {
         <div className="main-content">
           <Navbar onOpenNewMeeting={() => setIsNewMeetingModalOpen(true)} />
 
-          <main style={{ flex: 1, padding: '36px 24px', maxWidth: '1200px', margin: '0 auto', width: '100%', paddingBottom: '80px' }}>
+          <main style={{ flex: 1, padding: 'clamp(16px, 3vw, 36px) clamp(12px, 2.5vw, 24px)', maxWidth: '1200px', margin: '0 auto', width: '100%', minWidth: 0, paddingBottom: '90px' }}>
             {/* Header Greeting section */}
             <div style={{
               display: 'flex',

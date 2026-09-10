@@ -85,7 +85,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--background)', color: 'var(--text)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh', width: '100%', maxWidth: '100%', overflowX: 'hidden', background: 'var(--background)', color: 'var(--text)' }}>
       <Navbar />
 
       <style>{`
