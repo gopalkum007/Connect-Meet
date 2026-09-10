@@ -29,12 +29,31 @@ import {
   Clock,
   Sparkles,
   Copy,
-  ArrowRight
+  ArrowRight,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 
+const getIceServers = () => {
+  const iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
+  ];
 
-const peerConfigConnections = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  const turnUrl = import.meta.env.VITE_TURN_URL;
+  const turnUsername = import.meta.env.VITE_TURN_USERNAME;
+  const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL;
+
+  if (turnUrl) {
+    const urls = turnUrl.split(',').map((u) => u.trim()).filter(Boolean);
+    const turnEntry = { urls };
+    if (turnUsername) turnEntry.username = turnUsername;
+    if (turnCredential) turnEntry.credential = turnCredential;
+    iceServers.push(turnEntry);
+  }
+
+  return { iceServers, iceCandidatePoolSize: 10 };
 };
 
 import { extractRoomCode } from '../../utils/urlHelper.js';
@@ -85,6 +104,24 @@ const Meeting = () => {
   const [isWaitingForHostApproval, setIsWaitingForHostApproval] = useState(false);
   const [isJoinRejected, setIsJoinRejected] = useState(false);
   const [joinRequests, setJoinRequests] = useState([]);
+  const [isAudioAutoplayBlocked, setIsAudioAutoplayBlocked] = useState(false);
+
+  const handleMediaError = useCallback((error, type = 'media device') => {
+    console.error(`[MEDIA] ${type} error:`, error);
+    let msg = `Unable to access ${type}.`;
+    if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+      msg = `Camera/Microphone permission denied. Please allow access in your browser settings.`;
+    } else if (error?.name === 'NotFoundError' || error?.name === 'DevicesNotFoundError') {
+      msg = `No ${type} found on your system.`;
+    } else if (error?.name === 'NotReadableError' || error?.name === 'TrackStartError') {
+      msg = `Camera or microphone is currently in use by another application.`;
+    } else if (error?.name === 'OverconstrainedError') {
+      msg = `The requested ${type} resolution or settings are not supported.`;
+    } else if (error?.name === 'SecurityError') {
+      msg = `Media access requires a secure origin (HTTPS).`;
+    }
+    addToast(msg, 'error');
+  }, [addToast]);
 
   useEffect(() => {
     if (user?.name && !username) {
@@ -404,29 +441,53 @@ const Meeting = () => {
   const getPermissions = async () => {
     if (!isMeetingActiveRef.current) return;
     try {
-      if (!navigator.mediaDevices) return;
-      const videoPermission = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
-      if (!isMeetingActiveRef.current) {
-        if (videoPermission) videoPermission.getTracks().forEach((track) => { track.enabled = false; track.stop(); });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        addToast("MediaDevices API is not supported in this browser context (HTTPS required).", "error");
         return;
-      }
-      if (videoPermission) {
-        setVideoAvailable(true);
-        videoPermission.getTracks().forEach((track) => track.stop());
-      } else {
-        setVideoAvailable(false);
       }
 
-      const audioPermission = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        setVideoAvailable(true);
+        setAudioAvailable(true);
+      } catch (bothErr) {
+        console.warn("[MEDIA] Dual camera/mic acquisition failed, testing individual devices:", bothErr.name);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          setAudioAvailable(true);
+          setVideoAvailable(false);
+          setVideo(false);
+        } catch (audioErr) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            setVideoAvailable(true);
+            setAudioAvailable(false);
+            setAudio(false);
+          } catch (videoErr) {
+            handleMediaError(bothErr, 'camera and microphone');
+            setVideoAvailable(false);
+            setAudioAvailable(false);
+            setVideo(false);
+            setAudio(false);
+          }
+        }
+      }
+
       if (!isMeetingActiveRef.current) {
-        if (audioPermission) audioPermission.getTracks().forEach((track) => { track.enabled = false; track.stop(); });
+        if (stream) stream.getTracks().forEach((track) => { track.enabled = false; track.stop(); });
         return;
       }
-      if (audioPermission) {
-        setAudioAvailable(true);
-        audioPermission.getTracks().forEach((track) => track.stop());
-      } else {
-        setAudioAvailable(false);
+
+      // If hardware devices are unavailable, initialize synthetic tracks so WebRTC handshakes never break
+      if (!stream) {
+        const dummyAudio = silence();
+        const dummyVideo = black();
+        const tracks = [dummyAudio, dummyVideo].filter(Boolean);
+        stream = new MediaStream(tracks);
       }
 
       if (navigator.mediaDevices.getDisplayMedia) {
@@ -435,40 +496,23 @@ const Meeting = () => {
         setScreenAvailable(false);
       }
 
-      // Start local preview stream
-      const previewStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      }).catch(() => null);
-
-      if (!isMeetingActiveRef.current) {
-        if (previewStream) {
-          previewStream.getTracks().forEach((track) => {
-            track.enabled = false;
-            track.stop();
-          });
-        }
-        return;
-      }
-
-      if (previewStream) {
-        localStreamRef.current = previewStream;
-        window.localStream = previewStream;
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = previewStream;
-        }
+      localStreamRef.current = stream;
+      window.localStream = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
       }
     } catch (error) {
-      console.log(error);
+      console.error("[MEDIA] getPermissions error:", error);
     }
   };
 
   useEffect(() => {
     if (!isMeetingActiveRef.current) return;
-    if (video !== undefined && audio !== undefined) {
+    // Only re-run in pre-join lobby. Inside active meeting, toggles are handled by handleVideo/handleAudio
+    if (askForUsername && (video !== undefined && audio !== undefined)) {
       getUserMedia();
     }
-  }, [video, audio]);
+  }, [video, audio, askForUsername]);
 
   const setupVoiceDetector = (stream) => {
     const audioTrack = stream.getAudioTracks()[0];
@@ -572,13 +616,6 @@ const Meeting = () => {
     try {
       setupVoiceDetector(stream);
     } catch (err) {}
-    try {
-      if (window.localStream && window.localStream !== stream) {
-        window.localStream.getTracks().forEach((track) => track.stop());
-      }
-    } catch (e) {
-      console.log(e);
-    }
 
     localStreamRef.current = stream;
     window.localStream = stream;
@@ -589,99 +626,52 @@ const Meeting = () => {
     for (let id in connectionsRef.current) {
       if (id === socketIdRef.current || !connectionsRef.current[id]) continue;
       const pc = connectionsRef.current[id];
+      if (pc.signalingState === 'closed') continue;
       const senders = pc.getSenders ? pc.getSenders() : [];
 
       stream.getTracks().forEach((track) => {
         const sender = senders.find((s) => s.track && s.track.kind === track.kind);
         if (sender) {
-          sender.replaceTrack(track).catch((e) => console.log("replaceTrack error:", e));
+          sender.replaceTrack(track).catch((e) => console.warn("[WEBRTC] replaceTrack error:", e));
         } else {
           try {
             pc.addTrack(track, stream);
           } catch (e) {
-            console.log("addTrack error:", e);
+            console.warn("[WEBRTC] addTrack error:", e);
           }
         }
       });
     }
-
-    stream.getTracks().forEach((track) => {
-      track.onended = () => {
-        if (!isMeetingActiveRef.current) return;
-        setVideo(false);
-        setAudio(false);
-
-        try {
-          if (localVideoRef.current && localVideoRef.current.srcObject) {
-            let tracks = localVideoRef.current.srcObject.getTracks();
-            tracks.forEach((t) => t.stop());
-          }
-        } catch (e) {
-          console.log(e);
-        }
-
-        let blackSilence = (...args) => new MediaStream([black(...args), silence()]);
-        window.localStream = blackSilence();
-        localStreamRef.current = window.localStream;
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = window.localStream;
-        }
-
-        for (let id in connectionsRef.current) {
-          if (id === socketIdRef.current || !connectionsRef.current[id]) continue;
-          const pc = connectionsRef.current[id];
-          const senders = pc.getSenders ? pc.getSenders() : [];
-
-          window.localStream.getTracks().forEach((track) => {
-            const sender = senders.find((s) => s.track && s.track.kind === track.kind);
-            if (sender) {
-              sender.replaceTrack(track).catch((e) => console.log("replaceTrack error:", e));
-            }
-          });
-        }
-      };
-    });
   };
 
-  const getUserMedia = () => {
+  const getUserMedia = async () => {
     if (!isMeetingActiveRef.current) return;
-    if ((video && videoAvailable) || (audio && audioAvailable)) {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) return;
       const constraints = {
-        video: video ? (selectedVideo ? { deviceId: { exact: selectedVideo } } : true) : false,
-        audio: audio ? (selectedAudio ? { deviceId: { exact: selectedAudio } } : true) : false
+        video: video && videoAvailable ? (selectedVideo ? { deviceId: { exact: selectedVideo } } : true) : false,
+        audio: audio && audioAvailable ? (selectedAudio ? { deviceId: { exact: selectedAudio } } : true) : false
       };
-      if (navigator.mediaDevices?.getUserMedia) {
-        navigator.mediaDevices.getUserMedia(constraints)
-          .then((stream) => {
-            if (!isMeetingActiveRef.current) {
-              if (stream) {
-                stream.getTracks().forEach((track) => {
-                  track.enabled = false;
-                  track.stop();
-                });
-              }
-              return;
-            }
-            getUserMediaSuccess(stream);
-          })
-          .catch((e) => console.log(e));
+
+      if (!constraints.video && !constraints.audio) return;
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (!isMeetingActiveRef.current) {
+        stream.getTracks().forEach((t) => { t.enabled = false; t.stop(); });
+        return;
       }
-    } else {
-      try {
-        if (localVideoRef.current && localVideoRef.current.srcObject) {
-          let tracks = localVideoRef.current.srcObject.getTracks();
-          tracks?.forEach((track) => track.stop());
-        }
-      } catch (e) {}
+      getUserMediaSuccess(stream);
+    } catch (e) {
+      handleMediaError(e, 'camera/microphone');
     }
   };
 
   useEffect(() => {
     if (!isMeetingActiveRef.current) return;
-    if (selectedVideo || selectedAudio) {
+    if (askForUsername && (selectedVideo || selectedAudio)) {
       getUserMedia();
     }
-  }, [selectedVideo, selectedAudio]);
+  }, [selectedVideo, selectedAudio, askForUsername]);
 
   const getDisplayMediaSuccess = (stream) => {
     if (!isMeetingActiveRef.current) {
@@ -792,14 +782,45 @@ const Meeting = () => {
     }
 
     console.log("[WEBRTC] Creating new RTCPeerConnection for:", socketListId);
-    const pc = new RTCPeerConnection(peerConfigConnections);
+    const pc = new RTCPeerConnection(getIceServers());
     connectionsRef.current[socketListId] = pc;
     pc._iceQueue = [];
+    pc._remoteStream = new MediaStream();
 
     pc.onicecandidate = function (event) {
       if (event.candidate != null) {
+        console.log(`[WEBRTC] ICE candidate generated for ${socketListId}: type=${event.candidate.type || 'unknown'}, protocol=${event.candidate.protocol || 'unknown'}`);
         socketRef.current?.emit('signal', socketListId, JSON.stringify({ ice: event.candidate }));
       }
+    };
+
+    pc.onicecandidateerror = (event) => {
+      console.error(
+        "[WEBRTC] ICE candidate error",
+        event.errorCode,
+        event.errorText,
+        event.url
+      );
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[WEBRTC] ICE connection state with ${socketListId}:`, pc.iceConnectionState);
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log(`[WEBRTC] Connection state with ${socketListId}:`, pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        console.warn(`[WEBRTC] Connection failed with ${socketListId}. Attempting ICE restart.`);
+        if (pc.restartIce) pc.restartIce();
+      }
+    };
+
+    pc.onsignalingstatechange = () => {
+      console.log(`[WEBRTC] Signaling state with ${socketListId}:`, pc.signalingState);
+    };
+
+    pc.onicegatheringstatechange = () => {
+      console.log(`[WEBRTC] ICE gathering state with ${socketListId}:`, pc.iceGatheringState);
     };
 
     const handleRemoteStream = (remoteStream) => {
@@ -832,17 +853,41 @@ const Meeting = () => {
     };
 
     pc.ontrack = (event) => {
-      console.log("[WEBRTC] ontrack fired for:", socketListId);
-      const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
-      handleRemoteStream(stream);
+      console.log(`[WEBRTC] ontrack fired from ${socketListId} for kind: ${event.track.kind}, id: ${event.track.id}`);
+      if (!pc._remoteStream) {
+        pc._remoteStream = new MediaStream();
+      }
+
+      // Replace existing track of the same kind if ID is different
+      const existingTrack = pc._remoteStream.getTracks().find(t => t.kind === event.track.kind);
+      if (existingTrack && existingTrack.id !== event.track.id) {
+        pc._remoteStream.removeTrack(existingTrack);
+      }
+
+      if (!pc._remoteStream.getTrackById(event.track.id)) {
+        pc._remoteStream.addTrack(event.track);
+      }
+
+      event.track.onended = () => {
+        console.log(`[WEBRTC] Remote track ${event.track.kind} ended from ${socketListId}`);
+      };
+
+      handleRemoteStream(pc._remoteStream);
     };
 
     pc.onaddstream = (event) => {
       console.log("[WEBRTC] onaddstream fired for:", socketListId);
-      if (event.stream) handleRemoteStream(event.stream);
+      if (event.stream) {
+        event.stream.getTracks().forEach((track) => {
+          if (!pc._remoteStream.getTrackById(track.id)) {
+            pc._remoteStream.addTrack(track);
+          }
+        });
+        handleRemoteStream(pc._remoteStream);
+      }
     };
 
-    // Safely add local tracks EXACTLY ONCE
+    // Safely add local tracks
     if (window.localStream) {
       const senders = pc.getSenders ? pc.getSenders() : [];
       window.localStream.getTracks().forEach((track) => {
@@ -856,6 +901,22 @@ const Meeting = () => {
         }
       });
     }
+
+    pc.onnegotiationneeded = async () => {
+      try {
+        if (pc._makingOffer || pc.signalingState !== 'stable') return;
+        console.log(`[WEBRTC] onnegotiationneeded triggered for ${socketListId}`);
+        pc._makingOffer = true;
+        const offer = await pc.createOffer();
+        if (pc.signalingState !== 'stable') return;
+        await pc.setLocalDescription(offer);
+        socketRef.current?.emit('signal', socketListId, JSON.stringify({ sdp: pc.localDescription }));
+      } catch (err) {
+        console.error(`[WEBRTC] Negotiation error with ${socketListId}:`, err);
+      } finally {
+        pc._makingOffer = false;
+      }
+    };
 
     return pc;
   };
@@ -906,6 +967,21 @@ const Meeting = () => {
         }
 
         if (isOffer) {
+          // Ensure local tracks are attached before generating answer
+          if (window.localStream) {
+            const senders = pc.getSenders ? pc.getSenders() : [];
+            window.localStream.getTracks().forEach((track) => {
+              const alreadyAdded = senders.some((s) => s.track === track || (s.track && s.track.kind === track.kind));
+              if (!alreadyAdded) {
+                try {
+                  pc.addTrack(track, window.localStream);
+                } catch (e) {
+                  console.error("[WEBRTC] addTrack before answer error:", e);
+                }
+              }
+            });
+          }
+
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           socketRef.current?.emit('signal', fromId, JSON.stringify({ sdp: pc.localDescription }));
@@ -963,6 +1039,7 @@ const Meeting = () => {
     socketRef.current.on('signal', gotMessageFromServer);
 
     socketRef.current.on('connect', () => {
+      console.log("[SOCKET] Connected to signaling server with ID:", socketRef.current.id);
       socketIdRef.current = socketRef.current.id;
 
       // Emit join request for host approval
@@ -974,6 +1051,22 @@ const Meeting = () => {
         audioEnabled: audio,
         videoEnabled: video
       });
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      console.warn("[SOCKET] Disconnected from signaling server:", reason);
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error("[SOCKET] Signaling connection error:", error.message);
+    });
+
+    socketRef.current.io?.on('reconnect_attempt', (attempt) => {
+      console.log(`[SOCKET] Reconnection attempt #${attempt}`);
+    });
+
+    socketRef.current.io?.on('reconnect', (attempt) => {
+      console.log(`[SOCKET] Reconnected successfully after ${attempt} attempts`);
     });
 
     socketRef.current.on('waiting-for-host-approval', () => {
@@ -1321,7 +1414,20 @@ const Meeting = () => {
 
       clients.forEach((socketListId) => {
         if (socketListId === socketIdRef.current) return;
-        createPeerConnection(socketListId);
+        const pc = createPeerConnection(socketListId);
+        if (pc && window.localStream) {
+          const senders = pc.getSenders ? pc.getSenders() : [];
+          window.localStream.getTracks().forEach((track) => {
+            const alreadyAdded = senders.some((s) => s.track === track || (s.track && s.track.kind === track.kind));
+            if (!alreadyAdded) {
+              try {
+                pc.addTrack(track, window.localStream);
+              } catch (e) {
+                console.error("[WEBRTC] user-joined addTrack error:", e);
+              }
+            }
+          });
+        }
       });
 
       // Joining peer initiates offer to all established peers
@@ -1337,7 +1443,7 @@ const Meeting = () => {
             .then(() => {
               socketRef.current?.emit('signal', id2, JSON.stringify({ sdp: pc.localDescription }));
             })
-            .catch((e) => console.log("[WEBRTC] createOffer error:", e))
+            .catch((e) => console.error("[WEBRTC] createOffer error:", e))
             .finally(() => {
               pc._makingOffer = false;
             });
@@ -1386,13 +1492,37 @@ const Meeting = () => {
     return null;
   };
 
-  const handleVideo = () => {
+  const handleVideo = async () => {
     const newVideoState = !video;
     setVideo(newVideoState);
     if (window.localStream) {
       const videoTrack = window.localStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = newVideoState;
+      } else if (newVideoState && navigator.mediaDevices?.getUserMedia) {
+        try {
+          const fresh = await navigator.mediaDevices.getUserMedia({
+            video: selectedVideo ? { deviceId: { exact: selectedVideo } } : true
+          });
+          const newTrack = fresh.getVideoTracks()[0];
+          if (newTrack) {
+            window.localStream.addTrack(newTrack);
+            for (let id in connectionsRef.current) {
+              const pc = connectionsRef.current[id];
+              if (pc && pc.signalingState !== 'closed') {
+                const senders = pc.getSenders ? pc.getSenders() : [];
+                const vSender = senders.find(s => s.track && s.track.kind === 'video');
+                if (vSender) {
+                  await vSender.replaceTrack(newTrack);
+                } else {
+                  pc.addTrack(newTrack, window.localStream);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          handleMediaError(e, 'camera');
+        }
       }
     }
     if (socketRef.current) {
@@ -1405,13 +1535,37 @@ const Meeting = () => {
     }
   };
 
-  const handleAudio = () => {
+  const handleAudio = async () => {
     const newAudioState = !audio;
     setAudio(newAudioState);
     if (window.localStream) {
       const audioTrack = window.localStream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = newAudioState;
+      } else if (newAudioState && navigator.mediaDevices?.getUserMedia) {
+        try {
+          const fresh = await navigator.mediaDevices.getUserMedia({
+            audio: selectedAudio ? { deviceId: { exact: selectedAudio } } : true
+          });
+          const newTrack = fresh.getAudioTracks()[0];
+          if (newTrack) {
+            window.localStream.addTrack(newTrack);
+            for (let id in connectionsRef.current) {
+              const pc = connectionsRef.current[id];
+              if (pc && pc.signalingState !== 'closed') {
+                const senders = pc.getSenders ? pc.getSenders() : [];
+                const aSender = senders.find(s => s.track && s.track.kind === 'audio');
+                if (aSender) {
+                  await aSender.replaceTrack(newTrack);
+                } else {
+                  pc.addTrack(newTrack, window.localStream);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          handleMediaError(e, 'microphone');
+        }
       }
     }
     if (!newAudioState) {
@@ -1898,7 +2052,7 @@ const Meeting = () => {
               {/* Left Column: Video Preview and Hardware Configuration */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ position: 'relative', width: '100%', height: '240px', background: '#090D1A', borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1px solid #374151' }}>
-                  <video ref={localVideoRef} autoPlay muted style={{ width: '100%', height: '100%', objectFit: 'cover' }}></video>
+                  <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }}></video>
                   <div style={{ position: 'absolute', bottom: '12px', left: '12px', background: 'rgba(9, 13, 26, 0.85)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', color: '#F3F4F6', border: '1px solid #1F2937' }}>
                     📹 Video Preview
                   </div>
@@ -2103,6 +2257,34 @@ const Meeting = () => {
             </div>
           </div>
 
+          {/* Autoplay blocked banner */}
+          {isAudioAutoplayBlocked && (
+            <div
+              onClick={() => {
+                document.querySelectorAll('audio, video').forEach((el) => {
+                  el.play().catch(() => {});
+                });
+                setIsAudioAutoplayBlocked(false);
+              }}
+              style={{
+                background: 'linear-gradient(90deg, #EF4444, #F59E0B)',
+                color: '#FFFFFF',
+                padding: '10px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                zIndex: 40,
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
+              }}
+            >
+              <span>🔇 Remote audio may be muted by browser autoplay policy. <strong>Click anywhere here to enable audio</strong></span>
+            </div>
+          )}
+
           {/* Main workspace (video and side panel) */}
           <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
             
@@ -2138,9 +2320,19 @@ const Meeting = () => {
                   }}
                   className={`videoTile ${audio && activeSpeaker === socketIdRef.current ? 'speaking' : ''}`}
                 >
-                  {video ? (
-                    <video ref={localVideoRef} autoPlay muted style={{ width: '100%', height: '100%', objectFit: 'cover' }}></video>
-                  ) : (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: video ? 'block' : 'none'
+                    }}
+                  />
+                  {!video && (
                     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0F172A', gap: '16px' }}>
                       <div style={{
                         width: '70px',
@@ -2240,19 +2432,49 @@ const Meeting = () => {
                       }}
                       className={`videoTile ${isSpeaking ? 'speaking' : ''}`}
                     >
-                      {peerVideoActive ? (
-                        <video
-                          data-socket={vid.socketId}
-                          ref={(ref) => {
-                            if (ref && vid.stream && ref.srcObject !== vid.stream) {
+                      {/* Dedicated Audio Element for Remote Stream - Always mounted */}
+                      <audio
+                        data-socket={vid.socketId}
+                        ref={(ref) => {
+                          if (ref && vid.stream) {
+                            if (ref.srcObject !== vid.stream) {
                               ref.srcObject = vid.stream;
                             }
-                          }}
-                          autoPlay
-                          playsInline
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        ></video>
-                      ) : (
+                            ref.play().catch((err) => {
+                              console.warn(`[Audio] Remote audio autoplay blocked for peer ${vid.socketId}:`, err);
+                              setIsAudioAutoplayBlocked(true);
+                            });
+                          }
+                        }}
+                        autoPlay
+                        playsInline
+                      />
+
+                      {/* Remote Video Element - Muted so video stream is never blocked by browser audio autoplay policy */}
+                      <video
+                        data-socket={vid.socketId}
+                        ref={(ref) => {
+                          if (ref && vid.stream) {
+                            if (ref.srcObject !== vid.stream) {
+                              ref.srcObject = vid.stream;
+                            }
+                            ref.play().catch((err) => {
+                              console.warn(`[Video] Remote video play error for peer ${vid.socketId}:`, err);
+                            });
+                          }
+                        }}
+                        autoPlay
+                        playsInline
+                        muted
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          display: peerVideoActive ? 'block' : 'none'
+                        }}
+                      />
+
+                      {!peerVideoActive && (
                         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0F172A', gap: '16px' }}>
                           <div style={{
                             width: '70px',
