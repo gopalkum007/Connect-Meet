@@ -23,32 +23,47 @@ const PORT = parseInt(process.env.PORT, 10) || 8000;
 app.set("port", PORT);
 
 // Configure CORS
-// Configure CORS
-const allowedOrigins = [
-    "https://connect-meet-inky.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:5173"
-];
+// ==================== CORS CONFIGURATION ====================
 
+const FRONTEND_ORIGIN = "https://connect-meet-inky.vercel.app";
+
+// Explicitly set CORS headers
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,DELETE,PATCH,OPTIONS"
+    );
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    );
+
+    // Handle preflight request
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+    }
+
+    next();
+});
+
+// Also use the CORS package
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests without an origin
-        if (!origin) {
-            return callback(null, true);
-        }
-
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-
-        console.log("CORS blocked origin:", origin);
-        return callback(new Error("Not allowed by CORS"));
-    },
+    origin: FRONTEND_ORIGIN,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: [
+        "Origin",
+        "X-Requested-With",
+        "Content-Type",
+        "Accept",
+        "Authorization"
+    ],
     optionsSuccessStatus: 204
 }));
+
+// ============================================================
 
 // Payload limits
 app.use(express.json({ limit: "2mb" }));
