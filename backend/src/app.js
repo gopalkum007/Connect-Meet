@@ -22,37 +22,59 @@ const io = connectToSocket(server);
 const PORT = parseInt(process.env.PORT, 10) || 8000;
 app.set("port", PORT);
 
-// Configure CORS
 // ==================== CORS CONFIGURATION ====================
 
-const FRONTEND_ORIGIN = "https://connect-meet-inky.vercel.app";
+const defaultAllowedOrigins = [
+    "https://connect-meet-wk21.onrender.com",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173"
+];
 
-// Explicitly set CORS headers
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header(
-        "Access-Control-Allow-Methods",
-        "GET,POST,PUT,DELETE,PATCH,OPTIONS"
-    );
-    res.header(
-        "Access-Control-Allow-Headers",
-        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-    );
+const envAllowedOrigins = (process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map(o => o.trim())
+    .filter(Boolean)
+    .filter(o => !o.includes("connect-meet-inky.vercel.app")); // Never allow or return old Vercel origin
 
-    // Handle preflight request
-    if (req.method === "OPTIONS") {
-        return res.sendStatus(204);
-    }
+const allowedOriginsSet = new Set([...defaultAllowedOrigins, ...envAllowedOrigins]);
 
-    next();
-});
-
-// Also use the CORS package
+// Exactly ONE Express CORS middleware
 app.use(cors({
-    origin: FRONTEND_ORIGIN,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        // Strictly reject deprecated Vercel origin
+        if (origin.includes("connect-meet-inky.vercel.app")) {
+            return callback(new Error("CORS blocked: Deprecated origin"));
+        }
+
+        if (
+            allowedOriginsSet.has("*") ||
+            allowedOriginsSet.has(origin) ||
+            origin.startsWith("http://localhost:") ||
+            origin.startsWith("http://127.0.0.1:")
+        ) {
+            // Reflect the SINGLE matching origin in Access-Control-Allow-Origin
+            return callback(null, true);
+        }
+
+        console.log(`[CORS] Blocked request from origin: ${origin}`);
+        return callback(new Error(`CORS blocked: Origin ${origin} not allowed`));
+    },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    methods: [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH",
+        "OPTIONS"
+    ],
     allowedHeaders: [
         "Origin",
         "X-Requested-With",

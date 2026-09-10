@@ -66,13 +66,39 @@ const saveRoomSettings = async (roomCode, data) => {
 };
 
 export const connectToSocket = (server) => {
-    const allowedOrigin = process.env.CORS_ORIGIN 
-        ? (process.env.CORS_ORIGIN === "*" ? "*" : process.env.CORS_ORIGIN.split(",").map(s => s.trim()))
-        : "*";
+    const defaultOrigins = [
+        "https://connect-meet-wk21.onrender.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ];
+
+    const envOrigins = (process.env.CORS_ORIGIN || "")
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean)
+        .filter(s => !s.includes("connect-meet-inky.vercel.app"));
+
+    const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
     const io = new Server(server, {
         cors: {
-            origin: allowedOrigin,
+            origin: (origin, callback) => {
+                if (!origin) return callback(null, true);
+                if (origin.includes("connect-meet-inky.vercel.app")) {
+                    return callback(new Error("Socket CORS blocked: Deprecated origin"), false);
+                }
+                if (
+                    allowedOrigins.includes("*") ||
+                    allowedOrigins.includes(origin) ||
+                    origin.startsWith("http://localhost:") ||
+                    origin.startsWith("http://127.0.0.1:")
+                ) {
+                    return callback(null, true);
+                }
+                return callback(new Error("Socket CORS blocked: Origin not allowed"), false);
+            },
             methods: ["GET", "POST"],
             allowedHeaders: ["*"],
             credentials: true
