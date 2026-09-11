@@ -8,7 +8,7 @@ import Button from '../../components/common/Button.jsx';
 import Card from '../../components/common/Card.jsx';
 import Modal from '../../components/common/Modal.jsx';
 import Input from '../../components/common/Input.jsx';
-import { extractRoomCode } from '../../utils/urlHelper.js';
+import { extractRoomCode, generateRoomCode, formatMeetingUrl } from '../../utils/urlHelper.js';
 import { motion } from 'framer-motion';
 import {
   Video, Shield, Zap, MessageSquare, HelpCircle, Users, ArrowRight,
@@ -39,20 +39,27 @@ const LandingPage = () => {
 
   const handleStartMeeting = async (e) => {
     if (e) e.preventDefault();
-    const chars = 'abcdefghijklmnopqrstuvwxyz';
-    const randPart = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const code = `${randPart(3)}-${randPart(4)}-${randPart(3)}`;
+    console.log("[MEETING] Host meeting clicked");
+    const code = generateRoomCode();
+    console.log("[MEETING] Generated room code:", code);
+    console.log("[MEETING] Creating meeting...");
 
+    let finalCode = code;
     if (token) {
       try {
-        await createNewMeeting({ meetingCode: code, title: "Instant Meeting", status: "Live" });
+        const res = await createNewMeeting({ meetingCode: code, title: "Instant Meeting", status: "Live" });
+        console.log("[MEETING] API response:", res);
+        finalCode = res?.meetingCode || res?.roomCode || res?.meeting?.meetingCode || code;
       } catch (err) {
-        console.warn("Could not record meeting in database:", err);
+        console.warn("[MEETING] Could not record meeting in database:", err);
       }
     }
 
+    const fullUrl = formatMeetingUrl(finalCode);
+    console.log("[MEETING] Generated URL:", fullUrl);
+    console.log("[MEETING] Navigating to:", `/meet/${finalCode}`);
     addToast('Creating meeting room...', 'success');
-    navigate(`/meet/${code}`);
+    navigate(`/meet/${finalCode}`);
   };
 
   const handleJoinMeeting = async () => {

@@ -10,7 +10,7 @@ import Modal from '../../components/common/Modal.jsx';
 import Input from '../../components/common/Input.jsx';
 import withAuth from '../../utils/withAuth.jsx';
 import RecordingsModal from '../../components/Recordings/RecordingsModal.jsx';
-import { extractRoomCode } from '../../utils/urlHelper.js';
+import { extractRoomCode, formatMeetingUrl, generateRoomCode } from '../../utils/urlHelper.js';
 import {
   Video, Plus, Link as LinkIcon, History as HistoryIcon, Clock, Users, ArrowRight,
   Home, Calendar as CalendarIcon, Shield, Settings, Menu, ChevronLeft, ChevronRight,
@@ -33,6 +33,8 @@ const Dashboard = () => {
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [isRecordingsModalOpen, setIsRecordingsModalOpen] = useState(false);
   const [selectedMeetingDetails, setSelectedMeetingDetails] = useState(null);
+  const [isCreatedMeetingModalOpen, setIsCreatedMeetingModalOpen] = useState(false);
+  const [createdMeetingModalData, setCreatedMeetingModalData] = useState(null);
 
   // Schedule form state
   const [scheduleTitle, setScheduleTitle] = useState('');
@@ -83,32 +85,82 @@ const Dashboard = () => {
     }
   };
 
-  const generateMeetingCode = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyz';
-    const randPart = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    return `${randPart(3)}-${randPart(4)}-${randPart(3)}`;
-  };
+  const generateMeetingCode = generateRoomCode;
 
   const handleStartNow = async (e) => {
     if (e) e.preventDefault();
+    console.log("[MEETING] Host meeting clicked");
     setIsNewMeetingModalOpen(false);
     const code = generateMeetingCode();
+    console.log("[MEETING] Generated room code:", code);
+    console.log("[MEETING] Creating meeting");
     try {
-      await createNewMeeting({
+      const res = await createNewMeeting({
         meetingCode: code,
         title: "Instant Meeting",
         status: "Live",
         chatPermission: scheduleChatPermission
       });
+      console.log("[MEETING] API response:", res);
+      const finalCode = res?.meetingCode || res?.roomCode || res?.meeting?.meetingCode || code;
+      const targetUrl = `/meet/${finalCode}`;
+      console.log("[MEETING] Generated URL:", formatMeetingUrl(finalCode));
+      console.log("[MEETING] Navigating to:", targetUrl);
+      addToast('Creating meeting room...', 'success');
+      navigate(targetUrl);
     } catch (err) {
-      console.warn("Could not record meeting in database, starting room anyway:", err);
+      console.warn("[MEETING] Could not record meeting in database, starting room anyway:", err);
+      const targetUrl = `/meet/${code}`;
+      console.log("[MEETING] Generated URL:", formatMeetingUrl(code));
+      console.log("[MEETING] Navigating to:", targetUrl);
+      addToast('Creating meeting room...', 'success');
+      navigate(targetUrl);
     }
-    addToast('Creating meeting room...', 'success');
-    navigate(`/meet/${code}`);
+  };
+
+  const handleCreateForLater = async () => {
+    console.log("[MEETING] Host meeting clicked (Create for later)");
+    setIsNewMeetingModalOpen(false);
+    const code = generateMeetingCode();
+    console.log("[MEETING] Generated room code:", code);
+    console.log("[MEETING] Creating meeting");
+    try {
+      const res = await createNewMeeting({
+        meetingCode: code,
+        title: "Meeting for Later",
+        status: "Live",
+        chatPermission: scheduleChatPermission
+      });
+      console.log("[MEETING] API response:", res);
+      const finalCode = res?.meetingCode || res?.roomCode || res?.meeting?.meetingCode || code;
+      const fullUrl = formatMeetingUrl(finalCode);
+      console.log("[MEETING] Generated URL:", fullUrl);
+      setCreatedMeetingModalData({
+        title: "Meeting for Later",
+        meetingCode: finalCode,
+        url: fullUrl,
+        isInstant: true
+      });
+      setIsCreatedMeetingModalOpen(true);
+      fetchHistory();
+      addToast('Meeting link generated successfully!', 'success');
+    } catch (err) {
+      console.warn("[MEETING] Error recording meeting for later:", err);
+      const fullUrl = formatMeetingUrl(code);
+      setCreatedMeetingModalData({
+        title: "Meeting for Later",
+        meetingCode: code,
+        url: fullUrl,
+        isInstant: true
+      });
+      setIsCreatedMeetingModalOpen(true);
+      addToast('Meeting link generated!', 'info');
+    }
   };
 
   const handleCreateScheduleMeeting = async (e) => {
     e?.preventDefault();
+    console.log("[MEETING] Schedule meeting clicked");
     if (!scheduleTitle.trim()) {
       addToast('Please enter a meeting title', 'error');
       return;
@@ -123,25 +175,45 @@ const Dashboard = () => {
     const startDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
     const endDateTime = new Date(startDateTime.getTime() + (parseInt(scheduleDuration, 10) || 30) * 60000);
 
+    console.log("[MEETING] Generated room code:", code);
+    console.log("[MEETING] Creating meeting");
+
     try {
-      await createNewMeeting({
+      const res = await createNewMeeting({
         meetingCode: code,
-        title: scheduleTitle,
-        description: scheduleDescription,
+        title: scheduleTitle.trim(),
+        description: scheduleDescription.trim(),
         scheduledStartTime: startDateTime,
         scheduledEndTime: endDateTime,
         status: "Scheduled",
         chatPermission: scheduleChatPermission
       });
-      addToast('Meeting scheduled successfully!', 'success');
+      console.log("[MEETING] API response:", res);
+      const finalCode = res?.meetingCode || res?.roomCode || res?.meeting?.meetingCode || code;
+      const fullUrl = formatMeetingUrl(finalCode);
+      console.log("[MEETING] Generated URL:", fullUrl);
+
       setIsScheduleModalOpen(false);
+      setCreatedMeetingModalData({
+        title: scheduleTitle.trim(),
+        description: scheduleDescription.trim(),
+        meetingCode: finalCode,
+        url: fullUrl,
+        scheduledStartTime: startDateTime,
+        scheduledEndTime: endDateTime,
+        isInstant: false
+      });
+      setIsCreatedMeetingModalOpen(true);
+
       setScheduleTitle('');
       setScheduleDate('');
       setScheduleTime('');
       setScheduleDescription('');
       fetchHistory();
+      addToast('Meeting scheduled successfully!', 'success');
     } catch (err) {
-      addToast('Failed to schedule meeting', 'error');
+      console.error("[MEETING] Schedule meeting error:", err);
+      addToast('Failed to schedule meeting. Please try again.', 'error');
     } finally {
       setIsSubmittingSchedule(false);
     }
@@ -569,7 +641,7 @@ const Dashboard = () => {
             Choose how you would like to create your meeting:
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginTop: '8px' }}>
             <button type="button"
               onClick={handleStartNow}
               style={{
@@ -606,6 +678,46 @@ const Dashboard = () => {
                 <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>Start Meeting Now</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                   Create room & join immediately as host
+                </div>
+              </div>
+            </button>
+
+            <button type="button"
+              onClick={handleCreateForLater}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                padding: '24px 16px',
+                background: 'var(--background)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-lg)',
+                cursor: 'pointer',
+                color: 'var(--text)',
+                textAlign: 'center',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+            >
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10B981',
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <LinkIcon size={22} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>Create Link for Later</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Generate a link to share with others
                 </div>
               </div>
             </button>
@@ -648,7 +760,7 @@ const Dashboard = () => {
               <div>
                 <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>Schedule Meeting</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  Set date, time & persistent link for later
+                  Set date, time & calendar details
                 </div>
               </div>
             </button>
@@ -955,14 +1067,14 @@ const Dashboard = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '4px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Persistent Link:</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <code style={{ fontSize: '0.75rem', background: 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)' }}>
-                    {`${window.location.origin}/${selectedMeetingDetails.meetingCode}`}
+                  <code style={{ fontSize: '0.75rem', background: 'var(--surface)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', wordBreak: 'break-all' }}>
+                    {formatMeetingUrl(selectedMeetingDetails.meetingCode)}
                   </code>
                   <Button
                     variant="outline"
                     size="small"
                     onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/${selectedMeetingDetails.meetingCode}`);
+                      navigator.clipboard.writeText(formatMeetingUrl(selectedMeetingDetails.meetingCode));
                       addToast('Meeting link copied!', 'success');
                     }}
                   >
@@ -984,6 +1096,106 @@ const Dashboard = () => {
                 iconRight={<ArrowRight size={16} />}
               >
                 {selectedMeetingDetails.status === 'Scheduled' ? 'Start / Join Meeting' : 'Join Room'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal 5: Created Meeting Details / Copy Link */}
+      {createdMeetingModalData && (
+        <Modal
+          isOpen={isCreatedMeetingModalOpen}
+          onClose={() => setIsCreatedMeetingModalOpen(false)}
+          title={createdMeetingModalData.isInstant ? "Meeting Link Ready" : "Meeting Scheduled"}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <div style={{
+                display: 'inline-block',
+                fontSize: '0.7rem',
+                padding: '3px 10px',
+                borderRadius: '12px',
+                fontWeight: 700,
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10B981',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '8px'
+              }}>
+                Ready to Share
+              </div>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '4px 0', color: 'var(--text)' }}>
+                {createdMeetingModalData.title || "Your Meeting is Ready"}
+              </h3>
+              {createdMeetingModalData.description && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '4px 0 0 0' }}>
+                  {createdMeetingModalData.description}
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--background)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Room Code:</span>
+                <strong style={{ color: 'var(--primary)', letterSpacing: '0.05em' }}>{createdMeetingModalData.meetingCode}</strong>
+              </div>
+
+              {createdMeetingModalData.scheduledStartTime && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Scheduled Time:</span>
+                  <strong style={{ color: 'var(--text)' }}>
+                    {new Date(createdMeetingModalData.scheduledStartTime).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </strong>
+                </div>
+              )}
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Share this meeting link with invitees:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    readOnly
+                    value={createdMeetingModalData.url}
+                    style={{
+                      flex: 1,
+                      padding: '10px 12px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text)',
+                      fontSize: '0.85rem',
+                      outline: 'none'
+                    }}
+                    onClick={(e) => e.target.select()}
+                  />
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdMeetingModalData.url);
+                      addToast('Meeting link copied to clipboard!', 'success');
+                    }}
+                  >
+                    <Copy size={15} /> Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <Button variant="outline" onClick={() => setIsCreatedMeetingModalOpen(false)}>Close</Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const code = createdMeetingModalData.meetingCode;
+                  setIsCreatedMeetingModalOpen(false);
+                  navigate(`/meet/${code}`);
+                }}
+                iconRight={<ArrowRight size={16} />}
+              >
+                Join Meeting Now
               </Button>
             </div>
           </div>

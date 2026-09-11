@@ -167,16 +167,22 @@ const addToHistory = async (req, res) => {
             return res.status(httpStatus.OK).json({ message: "Added code to memory history" });
         }
 
-        const existingMeeting = await Meeting.findOne({ meetingCode: cleanCode });
-        if (existingMeeting) {
-            return res.status(httpStatus.OK).json({ message: "Meeting already exists in database", meeting: existingMeeting });
+        const existingUserMeeting = await Meeting.findOne({ meetingCode: cleanCode, user_id: req.user.username });
+        if (existingUserMeeting) {
+            return res.status(httpStatus.OK).json({ message: "Meeting already exists in database", meeting: existingUserMeeting });
         }
+
+        const originalMeeting = await Meeting.findOne({ meetingCode: cleanCode });
 
         const newMeeting = new Meeting({
             user_id: req.user.username,
             meetingCode: cleanCode,
-            title: "Instant Meeting",
-            status: "Live",
+            title: originalMeeting?.title || "Instant Meeting",
+            description: originalMeeting?.description || "",
+            scheduledStartTime: originalMeeting?.scheduledStartTime || new Date(),
+            scheduledEndTime: originalMeeting?.scheduledEndTime || null,
+            status: originalMeeting?.status || "Live",
+            chatPermission: originalMeeting?.chatPermission || "Everyone",
             date: new Date()
         });
 
@@ -191,21 +197,35 @@ const addToHistory = async (req, res) => {
 
 // Optional / Protected: Sets user_id from req.user if authenticated
 const createMeeting = async (req, res) => {
+    console.log("[MEETING API] Create request received:", req.body);
     const { meetingCode, title, description, scheduledStartTime, scheduledEndTime, status, chatPermission } = req.body || {};
 
-    if (!meetingCode || typeof meetingCode !== "string") {
-        return res.status(httpStatus.BAD_REQUEST).json({ message: "Valid meeting code is required" });
-    }
-
-    const cleanCode = meetingCode.trim();
     const creatorUsername = req.user ? req.user.username : "Guest";
+    console.log("[MEETING API] Authenticated user:", creatorUsername);
+
+    // Validate or generate room code
+    let cleanCode = meetingCode && typeof meetingCode === "string" ? meetingCode.trim() : "";
+    if (!cleanCode) {
+        const chars = 'abcdefghijklmnopqrstuvwxyz';
+        const randPart = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        cleanCode = `${randPart(3)}-${randPart(4)}-${randPart(3)}`;
+    }
+    console.log("[MEETING API] Generated room code:", cleanCode);
 
     try {
         if (!isDbConnected()) {
-            return res.status(httpStatus.CREATED).json({
+            const memMeeting = { meetingCode: cleanCode, title: title || "ConnectMeet Meeting", status: status || "Live", chatPermission: chatPermission || "Everyone" };
+            const payload = {
                 message: "Meeting created in room session",
-                meeting: { meetingCode: cleanCode, title: title || "ConnectMeet Meeting", status: status || "Live", chatPermission: chatPermission || "Everyone" }
-            });
+                meeting: memMeeting,
+                meetingCode: cleanCode,
+                roomCode: cleanCode,
+                url: `/meet/${cleanCode}`,
+                meetingUrl: `/meet/${cleanCode}`
+            };
+            console.log("[MEETING API] Meeting saved (in-memory):", cleanCode);
+            console.log("[MEETING API] Response sent:", payload);
+            return res.status(httpStatus.CREATED).json(payload);
         }
 
         let existingMeeting = await Meeting.findOne({ meetingCode: cleanCode });
@@ -221,7 +241,18 @@ const createMeeting = async (req, res) => {
             existingMeeting.status = status || existingMeeting.status;
             if (chatPermission) existingMeeting.chatPermission = chatPermission;
             await existingMeeting.save();
-            return res.status(httpStatus.OK).json({ message: "Meeting updated successfully", meeting: existingMeeting });
+
+            const payload = {
+                message: "Meeting updated successfully",
+                meeting: existingMeeting,
+                meetingCode: cleanCode,
+                roomCode: cleanCode,
+                url: `/meet/${cleanCode}`,
+                meetingUrl: `/meet/${cleanCode}`
+            };
+            console.log("[MEETING API] Meeting saved:", cleanCode);
+            console.log("[MEETING API] Response sent:", payload);
+            return res.status(httpStatus.OK).json(payload);
         }
 
         const newMeeting = new Meeting({
@@ -237,13 +268,29 @@ const createMeeting = async (req, res) => {
         });
 
         await newMeeting.save();
-        return res.status(httpStatus.CREATED).json({ message: "Meeting created successfully", meeting: newMeeting });
+
+        const payload = {
+            message: "Meeting created successfully",
+            meeting: newMeeting,
+            meetingCode: cleanCode,
+            roomCode: cleanCode,
+            url: `/meet/${cleanCode}`,
+            meetingUrl: `/meet/${cleanCode}`
+        };
+        console.log("[MEETING API] Meeting saved:", cleanCode);
+        console.log("[MEETING API] Response sent:", payload);
+        return res.status(httpStatus.CREATED).json(payload);
     } catch (e) {
-        console.error("createMeeting error:", e);
-        return res.status(httpStatus.CREATED).json({
+        console.error("[MEETING API] createMeeting error:", e);
+        const fallbackPayload = {
             message: "Meeting room active",
-            meeting: { meetingCode: cleanCode, title: title || "ConnectMeet Meeting", status: status || "Live" }
-        });
+            meeting: { meetingCode: cleanCode, title: title || "ConnectMeet Meeting", status: status || "Live" },
+            meetingCode: cleanCode,
+            roomCode: cleanCode,
+            url: `/meet/${cleanCode}`,
+            meetingUrl: `/meet/${cleanCode}`
+        };
+        return res.status(httpStatus.CREATED).json(fallbackPayload);
     }
 };
 

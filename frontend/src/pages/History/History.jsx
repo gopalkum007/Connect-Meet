@@ -234,31 +234,60 @@ const History = () => {
                     {formatDate(item.date)}
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteHistory(item)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    borderRadius: '20px',
-                    padding: '8px 16px',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    color: 'var(--error)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-                  }}
-                >
-                  <Trash2 size={16} /> Delete
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => navigate(`/meet/${item.meetingCode}`)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '20px',
+                      padding: '8px 16px',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      background: 'var(--primary)',
+                      color: '#ffffff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    <Video size={16} /> Join / Open
+                  </button>
+                  <button
+                    onClick={() => handleDeleteHistory(item)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '20px',
+                      padding: '8px 16px',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: 'var(--error)',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                    }}
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
               </div>
             ))}
             </div>
