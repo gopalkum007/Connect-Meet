@@ -109,26 +109,72 @@ const Settings = () => {
           </div>
         </div>
 
+        <style>{`
+          .settings-workspace-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 28px;
+            align-items: start;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+          }
+          .settings-sidebar {
+            grid-column: span 4;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+          }
+          .settings-content {
+            grid-column: span 8;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow);
+            min-width: 0;
+            overflow: hidden;
+          }
+          @media (max-width: 820px) {
+            .settings-workspace-grid {
+              grid-template-columns: 1fr;
+              gap: 16px;
+            }
+            .settings-sidebar {
+              grid-column: span 1;
+              flex-direction: row;
+              overflow-x: auto;
+              padding: 8px;
+              gap: 6px;
+              scrollbar-width: none;
+            }
+            .settings-sidebar::-webkit-scrollbar {
+              display: none;
+            }
+            .settings-sidebar button {
+              white-space: nowrap;
+              padding: 10px 14px !important;
+              flex: 1;
+              justify-content: center;
+            }
+            .settings-content {
+              grid-column: span 1;
+              padding: clamp(16px, 4vw, 24px);
+            }
+          }
+        `}</style>
+
         {/* Workspace Panels Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(12, 1fr)',
-          gap: '32px',
-          alignItems: 'start'
-        }} className="fade-in">
+        <div className="settings-workspace-grid fade-in">
           
           {/* Tab Navigation Sidebar */}
-          <div style={{
-            gridColumn: 'span 4',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '16px 12px',
-            boxShadow: 'var(--shadow)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-          }}>
+          <div className="settings-sidebar">
             {tabs.map((tab) => {
               const isSelected = activeTab === tab.id;
               return (
@@ -173,14 +219,7 @@ const Settings = () => {
           </div>
 
           {/* Settings Panels Content */}
-          <div style={{
-            gridColumn: 'span 8',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '36px',
-            boxShadow: 'var(--shadow)'
-          }}>
+          <div className="settings-content">
             {activeTab === 'translation' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }} className="scale-up">
                 <div>

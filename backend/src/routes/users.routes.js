@@ -9,7 +9,10 @@ import {
     getUserProfile,
     createMeeting,
     getMeetingByCode,
-    updateUserProfile
+    updateUserProfile,
+    forgotPassword,
+    verifyResetToken,
+    resetPassword
 } from "../controllers/user.controller.js";
 import { authMiddleware, optionalAuthMiddleware } from "../middlewares/auth.middleware.js";
 
@@ -18,6 +21,9 @@ const router = Router();
 // Public routes
 router.route("/login").post(login);
 router.route("/register").post(register);
+router.route("/forgot-password").post(forgotPassword);
+router.route("/verify-reset-token/:token").get(verifyResetToken);
+router.route("/reset-password/:token").post(resetPassword);
 router.route("/meeting/:code").get(getMeetingByCode);
 
 // Protected routes (require valid JWT)

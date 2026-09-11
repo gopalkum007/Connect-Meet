@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,7 +11,9 @@ import Footer from '../../components/layout/Footer.jsx';
 import Card from '../../components/common/Card.jsx';
 import Input from '../../components/common/Input.jsx';
 import Button from '../../components/common/Button.jsx';
-import { Video, User, Mail, Lock, ArrowRight, ShieldCheck, Cpu } from 'lucide-react';
+import Modal from '../../components/common/Modal.jsx';
+import { Video, User, Mail, Lock, ArrowRight, ShieldCheck, Cpu, CheckCircle2 } from 'lucide-react';
+import { forgotPassword } from '../../api/auth.api.js';
 
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -27,7 +30,18 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const { handleLogin, handleRegister } = useAuth();
   const { addToast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [apiError, setApiError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Forgot Password modal states
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState(false);
 
   const {
     register: loginRegister,
@@ -47,6 +61,38 @@ const Auth = () => {
     resolver: zodResolver(registerSchema),
   });
 
+  // Consume signup / password reset state passed via React Router state
+  useEffect(() => {
+    if (location.state?.prefillUsername || location.state?.prefillPassword || location.state?.signupSuccessMessage) {
+      setIsLogin(true);
+      setApiError('');
+      if (location.state.prefillUsername) {
+        resetLoginForm({
+          username: location.state.prefillUsername,
+          password: location.state.prefillPassword || ''
+        });
+      }
+      if (location.state.signupSuccessMessage) {
+        setSuccessMessage(location.state.signupSuccessMessage);
+        addToast(location.state.signupSuccessMessage, 'success');
+      }
+      // Immediately clear state from window history so refresh will NOT retain temporary credentials
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.resetSuccessMessage) {
+      setIsLogin(true);
+      setApiError('');
+      setSuccessMessage(location.state.resetSuccessMessage);
+      addToast(location.state.resetSuccessMessage, 'success');
+      if (location.state.prefillUsername) {
+        resetLoginForm({
+          username: location.state.prefillUsername,
+          password: ''
+        });
+      }
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, resetLoginForm, addToast]);
+
   const onLoginSubmit = async (data) => {
     setApiError('');
     try {
@@ -61,16 +107,44 @@ const Auth = () => {
 
   const onRegisterSubmit = async (data) => {
     setApiError('');
+    setSuccessMessage('');
     try {
-      const msg = await handleRegister(data.name, data.username, data.password);
-      addToast(msg || 'Registration successful! Please login.', 'success');
+      await handleRegister(data.name, data.username, data.password);
       resetRegisterForm();
-      setIsLogin(true);
+      // Redirect to login using React Router state with credentials pre-filled
+      // Does NOT store in localStorage/sessionStorage
+      navigate('/auth', {
+        state: {
+          prefillUsername: data.username,
+          prefillPassword: data.password,
+          signupSuccessMessage: 'Account created successfully. Please sign in.'
+        },
+        replace: true
+      });
     } catch (err) {
       console.error('Registration API Error:', err);
       const msg = err.response?.data?.message || 'User registration failed';
       setApiError(msg);
       addToast(msg, 'error');
+    }
+  };
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    if (!forgotIdentifier.trim()) {
+      setForgotError('Please enter your email or username');
+      return;
+    }
+    setForgotError('');
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotIdentifier.trim());
+      setForgotSuccess(true);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to request password reset. Please try again.';
+      setForgotError(msg);
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -107,8 +181,11 @@ const Auth = () => {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px 24px;
+            padding: clamp(24px, 4vw, 40px) clamp(12px, 3vw, 24px);
             background: radial-gradient(circle at center, rgba(14, 113, 235, 0.04), transparent 75%);
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
           }
           @media (min-width: 900px) {
             .auth-sidebar {
@@ -192,7 +269,7 @@ const Auth = () => {
 
           {/* Right Side: Form */}
           <div className="auth-form-side">
-            <Card style={{ width: '100%', maxWidth: '420px', padding: '36px', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)' }} className="fade-in">
+            <Card style={{ width: '100%', maxWidth: '420px', padding: 'clamp(20px, 4vw, 36px)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', boxSizing: 'border-box' }} className="fade-in">
               {/* Header */}
               <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                 <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
@@ -214,7 +291,7 @@ const Auth = () => {
               }}>
                 <button
                   type="button"
-                  onClick={() => { setIsLogin(true); setApiError(''); }}
+                  onClick={() => { setIsLogin(true); setApiError(''); setSuccessMessage(''); }}
                   style={{
                     flex: 1,
                     padding: '10px 16px',
@@ -233,7 +310,7 @@ const Auth = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setIsLogin(false); setApiError(''); }}
+                  onClick={() => { setIsLogin(false); setApiError(''); setSuccessMessage(''); }}
                   style={{
                     flex: 1,
                     padding: '10px 16px',
@@ -251,6 +328,27 @@ const Auth = () => {
                   Sign Up
                 </button>
               </div>
+
+              {/* Success Message Banner (e.g. Account created successfully / Password reset) */}
+              {successMessage && (
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  color: '#22c55e',
+                  padding: '12px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.86rem',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontWeight: 600,
+                  lineHeight: 1.4
+                }}>
+                  <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
+                  <span>{successMessage}</span>
+                </div>
+              )}
 
               {apiError && (
                 <div style={{
@@ -297,7 +395,11 @@ const Auth = () => {
                     </label>
                     <button
                       type="button"
-                      onClick={() => addToast('Please contact your meeting administrator to reset password.', 'info')}
+                      onClick={() => {
+                        setForgotError('');
+                        setForgotSuccess(false);
+                        setShowForgotModal(true);
+                      }}
                       style={{ background: 'none', border: 'none', padding: 0, fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)', cursor: 'pointer' }}
                     >
                       Forgot Password?
@@ -352,6 +454,112 @@ const Auth = () => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        isOpen={showForgotModal}
+        onClose={() => {
+          setShowForgotModal(false);
+          setForgotIdentifier('');
+          setForgotError('');
+          setForgotSuccess(false);
+        }}
+        title="Reset Password"
+      >
+        {forgotSuccess ? (
+          <div style={{ textAlign: 'center', padding: '12px 0' }}>
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '50%',
+              background: 'rgba(34, 197, 94, 0.15)',
+              color: '#22c55e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              border: '1px solid rgba(34, 197, 94, 0.3)'
+            }}>
+              <CheckCircle2 size={26} />
+            </div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '0 0 10px', color: 'var(--text)' }}>
+              Check Your Inbox
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '24px' }}>
+              If an account exists for <strong>{forgotIdentifier}</strong>, a password reset link has been sent. Please check your email inbox and spam folder. The link is valid for 15 minutes.
+            </p>
+            <Button
+              variant="primary"
+              width="100%"
+              onClick={() => {
+                setShowForgotModal(false);
+                setForgotIdentifier('');
+                setForgotSuccess(false);
+              }}
+              style={{ borderRadius: '30px', fontWeight: 700, padding: '12px' }}
+            >
+              Back to Sign In
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleForgotSubmit}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: '20px', marginTop: 0 }}>
+              Enter your registered email address or username. We will send you a secure password reset link.
+            </p>
+
+            {forgotError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: 'var(--error)',
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.85rem',
+                marginBottom: '16px'
+              }}>
+                {forgotError}
+              </div>
+            )}
+
+            <Input
+              label="Email or Username"
+              id="forgot-identifier"
+              type="text"
+              autoComplete="username"
+              placeholder="Enter your email or username"
+              iconLeft={<Mail size={18} />}
+              value={forgotIdentifier}
+              onChange={(e) => {
+                setForgotIdentifier(e.target.value);
+                if (forgotError) setForgotError('');
+              }}
+            />
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '22px' }}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowForgotModal(false);
+                  setForgotIdentifier('');
+                  setForgotError('');
+                }}
+                style={{ flex: 1, borderRadius: '30px', fontWeight: 600, padding: '10px' }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={forgotLoading}
+                style={{ flex: 1.3, borderRadius: '30px', fontWeight: 700, padding: '10px' }}
+              >
+                Send Reset Link
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       <Footer />
     </div>

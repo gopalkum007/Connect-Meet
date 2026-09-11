@@ -3,7 +3,27 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import crypto from "node:crypto";
 import { Meeting } from "../models/meeting.model.js";
+import { sendResetPasswordEmail } from "../services/mailService.js";
+
+const getFrontendUrl = (req) => {
+    if (process.env.FRONTEND_URL) {
+        return process.env.FRONTEND_URL.replace(/\/$/, "");
+    }
+    const origin = req.headers.origin || req.headers.referer;
+    if (origin) {
+        try {
+            const parsed = new URL(origin);
+            return `${parsed.protocol}//${parsed.host}`;
+        } catch {
+            // fallback
+        }
+    }
+    return process.env.NODE_ENV === "production"
+        ? "https://connect-meet-wk21.onrender.com"
+        : "http://localhost:5173";
+};
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
@@ -62,7 +82,7 @@ const login = async (req, res) => {
 };
 
 const register = async (req, res) => {
-    const { name, username, password } = req.body || {};
+    const { name, username, password, email } = req.body || {};
 
     if (!name || !username || !password || 
         typeof name !== "string" || typeof username !== "string" || typeof password !== "string") {
@@ -71,6 +91,7 @@ const register = async (req, res) => {
 
     const trimmedName = name.trim();
     const trimmedUsername = username.trim().toLowerCase();
+    const trimmedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
     if (trimmedUsername.length < 3) {
         return res.status(httpStatus.BAD_REQUEST).json({ message: "Username must be at least 3 characters long" });
@@ -94,7 +115,8 @@ const register = async (req, res) => {
         const newUser = new User({
             name: trimmedName,
             username: trimmedUsername,
-            password: hashedPassword
+            password: hashedPassword,
+            email: trimmedEmail
         });
 
         await newUser.save();
@@ -400,6 +422,129 @@ const deleteUserHistory = async (req, res) => {
     }
 };
 
+const forgotPassword = async (req, res) => {
+    const rawIdentifier = req.body?.email || req.body?.username || req.body?.emailOrUsername;
+    if (!rawIdentifier || typeof rawIdentifier !== "string") {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Email or username is required" });
+    }
+
+    const identifier = rawIdentifier.trim().toLowerCase();
+    const genericMessage = "If an account exists for this email, a password reset link has been sent.";
+
+    try {
+        if (!isDbConnected()) {
+            return res.status(httpStatus.SERVICE_UNAVAILABLE).json({ message: "Database connection unavailable" });
+        }
+
+        const user = await User.findOne({
+            $or: [
+                { email: identifier },
+                { username: identifier }
+            ]
+        });
+
+        if (!user) {
+            // Safe generic response to avoid account enumeration
+            return res.status(httpStatus.OK).json({ message: genericMessage });
+        }
+
+        // Generate cryptographically secure token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+
+        // Hash token for database storage (SHA-256)
+        const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+        user.resetPasswordToken = hashedToken;
+        user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        await user.save();
+
+        const frontendBase = getFrontendUrl(req);
+        const resetUrl = `${frontendBase}/reset-password/${resetToken}`;
+
+        const recipientEmail = user.email || (identifier.includes("@") ? identifier : "");
+        await sendResetPasswordEmail({
+            to: recipientEmail,
+            username: user.name || user.username,
+            resetUrl
+        });
+
+        return res.status(httpStatus.OK).json({ message: genericMessage });
+    } catch (err) {
+        console.error("forgotPassword controller error:", err);
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: "Failed to process forgot password request" });
+    }
+};
+
+const verifyResetToken = async (req, res) => {
+    const { token } = req.params;
+    if (!token || typeof token !== "string") {
+        return res.status(httpStatus.BAD_REQUEST).json({ valid: false, message: "Reset token is required" });
+    }
+
+    try {
+        if (!isDbConnected()) {
+            return res.status(httpStatus.SERVICE_UNAVAILABLE).json({ message: "Database connection unavailable" });
+        }
+
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: new Date() }
+        });
+
+        if (!user) {
+            return res.status(httpStatus.BAD_REQUEST).json({ valid: false, message: "Password reset token is invalid or has expired" });
+        }
+
+        return res.status(httpStatus.OK).json({ valid: true, username: user.username });
+    } catch (err) {
+        console.error("verifyResetToken controller error:", err);
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: "Error verifying reset token" });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { token } = req.params;
+    const { password } = req.body || {};
+
+    if (!token || typeof token !== "string") {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Reset token is required" });
+    }
+
+    if (!password || typeof password !== "string" || password.length < 6) {
+        return res.status(httpStatus.BAD_REQUEST).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    try {
+        if (!isDbConnected()) {
+            return res.status(httpStatus.SERVICE_UNAVAILABLE).json({ message: "Database connection unavailable" });
+        }
+
+        const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: new Date() }
+        });
+
+        if (!user) {
+            return res.status(httpStatus.BAD_REQUEST).json({ message: "Password reset token is invalid or has expired" });
+        }
+
+        // Hash new password using bcrypt
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        user.password = hashedPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        return res.status(httpStatus.OK).json({ message: "Password reset successfully. Please sign in." });
+    } catch (err) {
+        console.error("resetPassword controller error:", err);
+        return res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: "Error resetting password" });
+    }
+};
+
 export {
     login,
     register,
@@ -410,5 +555,8 @@ export {
     getUserProfile,
     createMeeting,
     getMeetingByCode,
-    updateUserProfile
+    updateUserProfile,
+    forgotPassword,
+    verifyResetToken,
+    resetPassword
 };

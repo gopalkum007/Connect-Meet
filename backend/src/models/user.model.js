@@ -7,7 +7,9 @@ const userScheme = new Schema(
         password: { type: String, required: true },
         email: { type: String, default: "", trim: true },
         avatar: { type: String, default: "" },
-        preferredLanguage: { type: String, default: "en" }
+        preferredLanguage: { type: String, default: "en" },
+        resetPasswordToken: { type: String, default: null, index: true },
+        resetPasswordExpires: { type: Date, default: null }
     },
     { timestamps: true }
 );

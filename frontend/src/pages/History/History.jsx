@@ -177,26 +177,46 @@ const History = () => {
             </p>
           </Card>
         ) : (
+          <>
+            <style>{`
+            .history-card-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: clamp(16px, 3vw, 22px) clamp(16px, 3.5vw, 28px);
+              background: var(--surface);
+              border: 1px solid var(--border);
+              borderRadius: var(--radius-lg);
+              transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+              box-shadow: var(--shadow);
+              flex-wrap: wrap;
+              gap: 14px;
+              width: 100%;
+              box-sizing: border-box;
+            }
+            .history-code-title {
+              font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+              font-weight: 800;
+              color: var(--text);
+              letter-spacing: -0.01em;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              flex-wrap: wrap;
+              word-break: break-all;
+            }
+          `}</style>
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="fade-in">
             {filteredHistory.map((item, index) => (
               <div
                 key={index}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '22px 28px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: 'var(--shadow)'
-                }}
+                className="history-card-row"
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)' }}></span>
-                    {item.meetingCode}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                  <div className="history-code-title">
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 }}></span>
+                    <span>{item.meetingCode}</span>
                     <span style={{
                       fontSize: '0.65rem',
                       padding: '2px 8px',
@@ -241,7 +261,8 @@ const History = () => {
                 </button>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
       </main>
 

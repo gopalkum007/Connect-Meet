@@ -14,7 +14,7 @@ import {
   Video, Shield, Zap, MessageSquare, HelpCircle, Users, ArrowRight,
   Globe, Lock, Mic, MicOff, Camera, Monitor, Radio, Calendar, PlusCircle,
   Link as LinkIcon, Sparkles, Send, Clock, ChevronRight, Check, Disc,
-  Share2, MoreHorizontal, PhoneOff, CheckCircle2
+  Share2, MoreHorizontal, PhoneOff, CheckCircle2, Mail
 } from 'lucide-react';
 
 const LandingPage = () => {
@@ -52,7 +52,7 @@ const LandingPage = () => {
     }
 
     addToast('Creating meeting room...', 'success');
-    navigate(`/${code}`);
+    navigate(`/meet/${code}`);
   };
 
   const handleJoinMeeting = async () => {
@@ -68,7 +68,7 @@ const LandingPage = () => {
     }
     setIsJoinModalOpen(false);
     addToast('Joining meeting room...', 'success');
-    navigate(`/${cleanCode}`);
+    navigate(`/meet/${cleanCode}`);
   };
 
   const containerVariants = {
@@ -727,24 +727,123 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* 10. PREMIUM FOOTER */}
-      <footer id="about" style={{ background: '#070B14', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '64px 24px 32px' }}>
-        <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '48px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
-              <img src="/logo.png" alt="Connect Meet Logo" style={{ height: '42px', objectFit: 'contain' }} />
-              <span style={{ fontWeight: 800, fontSize: '1.6rem', color: '#ffffff' }}>Connect Meet</span>
-            </div>
-            <p style={{ color: '#9CA3AF', fontSize: '1rem', lineHeight: 1.6, margin: '0 auto', maxWidth: '700px' }}>
-              Next-generation video conferencing platform powered by WebRTC and real-time AI translation engines. Connect securely and effortlessly with your team. Everything is 100% Free!
-            </p>
+      {/* 10. SUPPORT SECTION */}
+      <section id="support" style={{
+        padding: '80px 24px',
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
+        position: 'relative'
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', background: 'rgba(14, 113, 235, 0.1)', color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>
+            SUPPORT
           </div>
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '24px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', color: '#6B7280', fontSize: '0.85rem' }}>
-            <span>© 2026 Connect Meet. All rights reserved.</span>
-            <span>Designed for enterprise-grade video conferencing.</span>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', margin: '0 0 12px' }}>
+            Need help with Connect Meet?
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', margin: '0 auto 36px', maxWidth: '600px', lineHeight: 1.6 }}>
+            Contact the development team. We are here to help with connectivity, features, and setup.
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '20px',
+            textAlign: 'left'
+          }}>
+            {/* Contact 1: Gopal Kumar */}
+            <Card hover style={{ padding: '24px', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '1.1rem'
+                }}>
+                  G
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                    Gopal Kumar
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Lead Developer</span>
+                </div>
+              </div>
+              <a
+                href="mailto:gopalkum007@gmail.com"
+                style={{
+                  fontSize: '0.92rem',
+                  color: 'var(--primary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: 'auto',
+                  paddingTop: '8px',
+                  wordBreak: 'break-all',
+                  fontWeight: 600,
+                  textDecoration: 'none'
+                }}
+                aria-label="Email Gopal Kumar at gopalkum007@gmail.com"
+              >
+                <Mail size={16} style={{ flexShrink: 0 }} /> gopalkum007@gmail.com
+              </a>
+            </Card>
+
+            {/* Contact 2: Bhaskar Kumar */}
+            <Card hover style={{ padding: '24px', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--accent), var(--primary))',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '1.1rem'
+                }}>
+                  B
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
+                    Bhaskar Kumar
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Core Developer</span>
+                </div>
+              </div>
+              <a
+                href="mailto:bhaskar1157@becsechitkarauniversity.edu.in"
+                style={{
+                  fontSize: '0.92rem',
+                  color: 'var(--primary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginTop: 'auto',
+                  paddingTop: '8px',
+                  wordBreak: 'break-all',
+                  fontWeight: 600,
+                  textDecoration: 'none'
+                }}
+                aria-label="Email Bhaskar Kumar at bhaskar1157@becsechitkarauniversity.edu.in"
+              >
+                <Mail size={16} style={{ flexShrink: 0 }} /> bhaskar1157@becsechitkarauniversity.edu.in
+              </a>
+            </Card>
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* 11. FOOTER */}
+      <Footer />
 
       {/* Modal: Join Meeting without Signup */}
       <Modal

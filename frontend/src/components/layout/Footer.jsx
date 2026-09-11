@@ -26,18 +26,48 @@ const Footer = () => {
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0 }}>
           A premium, secure, and modern video conferencing application designed for high quality communication.
         </p>
+
+        {/* Developer Credits */}
+        <div style={{
+          marginTop: '8px',
+          padding: '12px 20px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 700 }}>
+            Developed By
+          </span>
+          <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text)', textAlign: 'center', wordBreak: 'break-word' }}>
+            Gopal Kumar &amp; Bhaskar Kumar
+          </span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+            Computer Science &amp; Engineering
+          </span>
+        </div>
       </div>
 
       <div style={{
         maxWidth: '1200px',
         margin: '0 auto',
         borderTop: '1px solid var(--border)',
-        paddingTop: '24px',
-        textAlign: 'center',
+        paddingTop: '20px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '12px',
         color: 'var(--text-muted)',
-        fontSize: '0.85rem'
+        fontSize: '0.85rem',
+        textAlign: 'center'
       }}>
-        © {new Date().getFullYear()} Connect Meet. All rights reserved.
+        <div style={{ margin: '0 auto' }}>
+          © {new Date().getFullYear()} Connect Meet. All rights reserved.
+        </div>
       </div>
     </footer>
   );

@@ -77,7 +77,7 @@ const Dashboard = () => {
     try {
       await addToUserHistory(cleanCode);
       addToast('Joining meeting...', 'success');
-      navigate(`/${cleanCode}`);
+      navigate(`/meet/${cleanCode}`);
     } catch (err) {
       addToast('Failed to join meeting', 'error');
     }
@@ -104,7 +104,7 @@ const Dashboard = () => {
       console.warn("Could not record meeting in database, starting room anyway:", err);
     }
     addToast('Creating meeting room...', 'success');
-    navigate(`/${code}`);
+    navigate(`/meet/${code}`);
   };
 
   const handleCreateScheduleMeeting = async (e) => {
@@ -427,7 +427,7 @@ const Dashboard = () => {
             <div className="dashboard-grid fade-in">
               {/* Left Column: Quick Action Cards */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '16px' }}>
                   
                   {/* Action 1: New Meeting */}
                   <Card hover onClick={() => setIsNewMeetingModalOpen(true)} style={{
@@ -979,7 +979,7 @@ const Dashboard = () => {
                 onClick={() => {
                   const code = selectedMeetingDetails.meetingCode;
                   setSelectedMeetingDetails(null);
-                  navigate(`/${code}`);
+                  navigate(`/meet/${code}`);
                 }}
                 iconRight={<ArrowRight size={16} />}
               >

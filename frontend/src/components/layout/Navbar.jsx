@@ -58,7 +58,7 @@ const Navbar = ({ onOpenNewMeeting }) => {
     setIsMeetDropdownOpen(false);
     setIsOpen(false);
     addToast('Joining meeting...', 'success');
-    navigate(`/${cleanCode}`);
+    navigate(`/meet/${cleanCode}`);
   };
 
   const handleHostMeeting = async (e) => {
@@ -84,7 +84,7 @@ const Navbar = ({ onOpenNewMeeting }) => {
     }
 
     addToast('Creating meeting room...', 'success');
-    navigate(`/${code}`);
+    navigate(`/meet/${code}`);
   };
 
   return (
@@ -356,17 +356,16 @@ const Navbar = ({ onOpenNewMeeting }) => {
               </>
             )}
           </div>
-
-
-          {/* Mobile Hamburger Toggle Button */}
-          <button type="button"
-            className="mobile-toggle-btn"
-            onClick={(e) => { e.stopPropagation(); setIsOpen(prev => !prev); }}
-            aria-label="Toggle Navigation Menu"
-          >
-            {isOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
+
+        {/* Mobile Hamburger Toggle Button (outside desktop-menu so it displays on mobile) */}
+        <button type="button"
+          className="mobile-toggle-btn"
+          onClick={(e) => { e.stopPropagation(); setIsOpen(prev => !prev); }}
+          aria-label="Toggle Navigation Menu"
+        >
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
       </div>
 
       {/* Mobile Navigation Dropdown Menu */}
@@ -456,39 +455,83 @@ const Navbar = ({ onOpenNewMeeting }) => {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px', background: 'rgba(14, 113, 235, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(14, 113, 235, 0.2)' }}>
-            <ShieldCheck size={32} color="var(--primary)" />
+            <ShieldCheck size={32} color="var(--primary)" style={{ flexShrink: 0 }} />
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Need Assistance?</h4>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.08em', color: 'var(--primary)', textTransform: 'uppercase' }}>
+                SUPPORT
+              </span>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', margin: '2px 0 0' }}>
+                Need help with Connect Meet?
+              </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
-                We are available 24/7 to help you with meeting access, real-time translation setup, and WebRTC streaming issues.
+                Contact the development team directly for assistance with meetings, WebRTC streaming, or feature requests.
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ padding: '12px 16px', background: 'var(--background)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>How do I host a meeting?</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Click on the <strong>Meet</strong> dropdown in the top bar and select <strong>Host Meeting</strong>. You will be prompted to sign up or log in first.
+            {/* Contact 1: Gopal Kumar */}
+            <div style={{
+              padding: '14px 16px',
+              background: 'var(--background)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>
+                Gopal Kumar
               </div>
+              <a
+                href="mailto:gopalkum007@gmail.com"
+                style={{
+                  fontSize: '0.9rem',
+                  color: 'var(--primary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  wordBreak: 'break-all',
+                  textDecoration: 'none'
+                }}
+                aria-label="Email Gopal Kumar at gopalkum007@gmail.com"
+              >
+                <Mail size={16} style={{ flexShrink: 0 }} /> gopalkum007@gmail.com
+              </a>
             </div>
 
-            <div style={{ padding: '12px 16px', background: 'var(--background)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>Do guests need an account to join?</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                No! Anyone with a meeting code can click <strong>Join Meeting</strong> in the Meet dropdown and join immediately without signing up.
+            {/* Contact 2: Bhaskar Kumar */}
+            <div style={{
+              padding: '14px 16px',
+              background: 'var(--background)',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>
+                Bhaskar Kumar
               </div>
-            </div>
-
-            <div style={{ padding: '12px 16px', background: 'var(--background)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text)' }}>Contact Support Team</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--primary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Mail size={16} /> support@connectmeet.io
-              </div>
+              <a
+                href="mailto:bhaskar1157@becsechitkarauniversity.edu.in"
+                style={{
+                  fontSize: '0.9rem',
+                  color: 'var(--primary)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  wordBreak: 'break-all',
+                  textDecoration: 'none'
+                }}
+                aria-label="Email Bhaskar Kumar at bhaskar1157@becsechitkarauniversity.edu.in"
+              >
+                <Mail size={16} style={{ flexShrink: 0 }} /> bhaskar1157@becsechitkarauniversity.edu.in
+              </a>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
             <Button variant="primary" onClick={() => setIsSupportModalOpen(false)}>Close</Button>
           </div>
         </div>

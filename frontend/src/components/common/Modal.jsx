@@ -43,7 +43,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
               <X size={20} />
             </button>
           </div>
-          <div style={{ padding: '20px' }}>{children}</div>
+          <div className="modal-body">{children}</div>
         </motion.div>
       </div>
     </AnimatePresence>,
